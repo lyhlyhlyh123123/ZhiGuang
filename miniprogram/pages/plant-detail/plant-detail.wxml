@@ -1,0 +1,108 @@
+<view class="page-container">
+  
+  <view class="hero-section">
+    <image class="hero-bg" src="{{plantInfo.photoFileID}}" mode="aspectFill" wx:if="{{plantInfo}}"></image>
+  </view>
+
+  <view class="content-card">
+  
+    <!-- 植物信息展示区 -->
+    <view class="plant-info-section">
+        <view class="plant-name-row">
+          <view class="name-with-icon">
+            <text class="plant-icon iconfont icon-xiugaimingcheng"></text>
+            <text class="plant-name">{{plantInfo.nickname}}</text>
+            <text class="species-icon iconfont icon-penzai"></text>
+            <text class="plant-latin">{{plantInfo.species}}</text>
+          </view>
+          <view class="edit-btn btn-primary" bindtap="goToEditPlant">
+            <text class="edit-text">编辑资料</text>
+          </view>
+        </view>
+      
+      <view class="info-tags">
+        <view class="info-tag">
+          <text class="tag-icon iconfont icon-yunshudidian"></text>
+          <text class="tag-label">位置</text>
+          <text class="tag-value">{{plantInfo.location || '未设置'}}</text>
+        </view>
+        <view class="info-tag">
+          <text class="tag-icon iconfont icon-calendar"></text>
+          <text class="tag-label">陪伴</text>
+          <text class="tag-value">{{adoptDays}}天</text>
+        </view>
+        <view class="info-tag">
+          <text class="tag-icon iconfont icon-heart"></text>
+          <text class="tag-label">亲密度</text>
+          <text class="tag-value highlight">{{intimacy}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 养护信息区 -->
+    <view class="care-info-section" wx:if="{{isOwner}}">
+      <view class="care-item">
+        <view class="care-label-row">
+          <text class="care-icon iconfont icon-Water"></text>
+          <text class="care-label">浇水周期</text>
+        </view>
+        <text class="care-value">{{plantInfo.waterInterval || 7}}天/次</text>
+      </view>
+      <view class="care-item">
+        <view class="care-label-row">
+          <text class="care-icon iconfont icon-riqi"></text>
+          <text class="care-label">下次浇水</text>
+        </view>
+        <text class="care-value {{nextWatering.isOverdue ? 'warn' : ''}}">{{nextWatering.text}}</text>
+      </view>
+    </view>
+
+    <view class="timeline-header">
+      <text class="timeline-title">养成日记</text>
+    </view>
+
+    <view class="timeline-list" wx:if="{{journalList.length > 0}}">
+      <view class="timeline-item" wx:for="{{journalList}}" wx:key="_id">
+        <view class="timeline-axis">
+          <view class="timeline-line"></view>
+          <view class="timeline-dot {{item.photoFileID || item.photoList.length > 0 ? 'bg-blue' : 'bg-green'}}">
+            <text wx:if="{{item.photoFileID || item.photoList.length > 0}}" class="icon icon-image"></text>
+            <text wx:else class="icon icon-jilu"></text>
+          </view>
+        </view>
+        <view class="timeline-content">
+          <view class="timeline-card">
+            <view class="card-header">
+              <text class="action-title">{{item.actionDisplayName || '记录成长'}}</text>
+              <text class="action-date">{{item.formatTime}}</text>
+            </view>
+            <text class="action-note" wx:if="{{item.note}}">{{item.note}}</text>
+            
+            <view class="photo-preview" wx:if="{{item.photoList && item.photoList.length > 0}}">
+              <image class="mini-img" wx:for="{{item.photoList}}" wx:for-item="img" wx:key="*this" src="{{img}}" mode="aspectFill" bindtap="previewJournalImg" data-current="{{img}}" data-list="{{item.photoList}}"></image>
+            </view>
+            <image class="mini-img" src="{{item.photoFileID}}" mode="aspectFill" wx:elif="{{item.photoFileID}}" bindtap="previewJournalImg" data-current="{{item.photoFileID}}" data-list="{{[item.photoFileID]}}"></image>
+
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state" wx:else>
+      <text>还没有记录哦，快去添加吧~</text>
+    </view>
+
+  </view>
+
+  <view class="bottom-action-bar">
+    <button class="btn-record" bindtap="openJournalPage">
+      <text class="btn-icon icon icon-jilu"></text>
+      <text class="btn-text">记录成长</text>
+    </button>
+    <button class="btn-share" bindtap="sharePlant">
+      <text class="btn-icon icon icon-share"></text>
+      <text class="btn-text">转发给朋友</text>
+    </button>
+  </view>
+
+</view>

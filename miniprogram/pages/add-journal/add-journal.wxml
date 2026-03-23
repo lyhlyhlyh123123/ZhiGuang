@@ -1,0 +1,63 @@
+<view class="page-container">
+  <view class="nav-header">
+    <view class="back-btn" bindtap="goBack">
+      <text class="icon icon-back"></text>
+    </view>
+    <text class="nav-title">记录 {{plantName}} 的成长</text>
+    <view class="placeholder-box"></view>
+  </view>
+  <scroll-view scroll-y class="scroll-content">
+    <view class="section-title">记录对象</view>
+    <view class="selected-plant-card">
+      <view class="plant-info-display">
+        <text class="plant-name-label">正在记录：</text>
+        <text class="plant-name-value">{{plantName}}</text>
+      </view>
+    </view>
+
+    <view class="section-title">做了哪些事？(可多选)</view>
+  <view class="action-grid">
+    <view 
+      class="action-item {{item.selected ? 'active' : ''}}" 
+      wx:for="{{actions}}" 
+      wx:key="value" 
+      bindtap="toggleAction" 
+      data-index="{{index}}"
+    >
+      <text class="action-icon icon {{item.icon}}"></text>
+      <text class="action-label">{{item.label}}</text>
+      <view class="check-badge" wx:if="{{item.selected}}">
+        <text class="icon icon-plus" style="font-size: 16rpx; color: #fff;"></text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-title">上传瞬间 (最多 9 张)</view>
+  <view class="image-list">
+    <view class="image-wrapper" wx:for="{{tempImagePaths}}" wx:key="*this">
+      <image 
+        class="image-wrapper-img"
+        src="{{item}}" 
+        mode="aspectFill" 
+        bindtap="previewImage" 
+        data-url="{{item}}"
+      ></image>
+      <view class="delete-img" catchtap="deleteImage" data-index="{{index}}">
+        <text class="icon icon-close" style="font-size: 24rpx; color: #fff;"></text>
+      </view>
+    </view>
+    
+    <view class="add-img-btn" bindtap="chooseImage" wx:if="{{tempImagePaths.length < 9}}">
+      <text class="plus icon icon-plus"></text>
+    </view>
+  </view>
+
+  <view class="section-title">想说的话</view>
+  <view class="input-card">
+    <textarea placeholder="描述下此刻的心情..." value="{{note}}" bindinput="onNoteInput" maxlength="200" class="diary-input"></textarea>
+    <view class="word-count">{{note.length || 0}} / 200</view>
+  </view>
+
+  <button class="save-btn" bindtap="submitJournal">保存这条动态</button>
+  </scroll-view>
+</view>

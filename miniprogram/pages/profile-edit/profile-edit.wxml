@@ -1,0 +1,31 @@
+<view class="container">
+  <view class="profile-header">
+    <text class="title">园丁身份同步</text>
+    <text class="subtitle">让这片花园记住你的模样</text>
+  </view>
+
+  <view class="setup-form">
+    <!-- 头像选择 -->
+    <button class="avatar-wrapper" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image class="setup-avatar" src="{{tempAvatarUrl || userInfo.avatarUrl || '/images/avatar.png'}}" mode="aspectFill"></image>
+      <view class="avatar-edit-tag">
+        <text class="icon icon-image"></text>
+      </view>
+    </button>
+    <text class="hint-text">点击圆圈同步微信头像</text>
+    
+    <!-- 昵称填写 -->
+    <view class="nickname-section">
+      <view class="input-group">
+        <text class="label">昵称</text>
+        <input type="nickname" class="nickname-input" placeholder="输入或同步微信昵称" bindblur="onNicknameBlur" bindinput="onNicknameInput" value="{{tempNickname || userInfo.nickName}}" />
+      </view>
+      <text class="hint-text">点击输入框可快速同步微信昵称</text>
+    </view>
+  </view>
+
+  <view class="action-footer">
+    <button class="save-btn {{canSubmit ? '' : 'btn-disabled'}}" bindtap="saveUserProfile" disabled="{{!canSubmit}}">完成资料同步</button>
+    <button class="logout-btn" wx:if="{{userInfo.nickName !== '见习'}}" bindtap="logout">退出登录</button>
+  </view>
+</view>

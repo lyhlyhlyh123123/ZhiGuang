@@ -1,0 +1,93 @@
+<!--pages/edit-plant/edit-plant.wxml-->
+<view class="page-container">
+
+  <view class="nav-header">
+    <view class="back-btn" bindtap="goBack"><text class="icon icon-arrow-left-b"></text></view>
+    <text class="nav-title">编辑植物资料</text>
+    <view class="placeholder-box"></view>
+  </view>
+
+  <scroll-view scroll-y class="scroll-content">
+
+    <view class="photo-upload-box {{tempImagePath ? 'has-img' : ''}}" bindtap="chooseImage">
+      <image wx:if="{{tempImagePath}}" src="{{tempImagePath}}" mode="aspectFill" class="uploaded-img"></image>
+      <view wx:else class="upload-placeholder">
+        <text class="icon icon-image"></text>
+        <text class="upload-title">点击上传植物照片</text>
+        <text class="upload-subtitle">选一张它最好看的瞬间</text>
+      </view>
+    </view>
+
+    <view class="section-title">基础信息</view>
+    <view class="info-group">
+      <view class="input-wrapper">
+        <text class="input-label">植物昵称</text>
+        <input class="styled-input" placeholder="给你的伙伴起个名字吧..." value="{{nickname}}" bindinput="onNicknameInput" />
+      </view>
+
+      <view class="input-wrapper">
+        <text class="input-label">植物品种</text>
+        <input class="styled-input" placeholder="例如：龟背竹、多肉..." value="{{species}}" bindinput="onSpeciesInput" />
+      </view>
+
+      <view class="input-wrapper">
+        <text class="input-label">摆放位置</text>
+        <input class="styled-input" placeholder="例如：阳台、客厅、书桌..." value="{{location}}" bindinput="onLocationInput" />
+        <view class="quick-tags">
+          <view class="tag-chip {{location === '阳台' ? 'active' : ''}}" bindtap="quickSetLocation" data-val="阳台">阳台</view>
+          <view class="tag-chip {{location === '客厅' ? 'active' : ''}}" bindtap="quickSetLocation" data-val="客厅">客厅</view>
+          <view class="tag-chip {{location === '书房' ? 'active' : ''}}" bindtap="quickSetLocation" data-val="书房">书房</view>
+          <view class="tag-chip {{location === '卧室' ? 'active' : ''}}" bindtap="quickSetLocation" data-val="卧室">卧室</view>
+        </view>
+      </view>
+
+      <view class="input-wrapper">
+        <text class="input-label">到家日期</text>
+        <picker mode="date" value="{{adoptDate}}" bindchange="onDateChange">
+          <view class="picker-text {{adoptDate ? '' : 'placeholder-color'}}">
+            {{adoptDate || '请选择它来到你身边的日期'}}
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="section-title mt-8">养护设定</view>
+    <view class="settings-card">
+      
+      <view class="setting-item">
+        <view class="setting-info">
+          <view class="setting-icon bg-blue icon icon-water"></view>
+          <view class="setting-text">
+            <text class="setting-name">浇水周期</text>
+            <text class="setting-desc">目前设定: {{waterInterval}} 天/次</text>
+          </view>
+        </view>
+        <view class="stepper">
+          <view class="step-btn" bindtap="minusInterval">-</view>
+          <text class="step-val">{{waterInterval}}</text>
+          <view class="step-btn text-green" bindtap="addInterval">
+            <text class="icon icon-plus" style="font-size: 24rpx;"></text>
+          </view>
+        </view>
+      </view>
+
+      <view class="setting-item no-border">
+        <view class="setting-info">
+          <view class="setting-icon bg-orange icon icon-add"></view>
+          <view class="setting-text">
+            <text class="setting-name">开启提醒</text>
+            <text class="setting-desc">缺水时系统主动推送</text>
+          </view>
+        </view>
+        <switch checked="{{remindEnabled}}" bindchange="onRemindChange" color="#22C55E" />
+      </view>
+      
+    </view>
+
+  </scroll-view>
+
+  <view class="bottom-bar">
+    <button class="submit-btn" bindtap="submitPlant">保存修改</button>
+  </view>
+
+</view>

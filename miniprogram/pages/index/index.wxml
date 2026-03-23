@@ -1,0 +1,110 @@
+<view class="page-container">
+  
+  <view class="header-bar">
+    <view class="greeting-box">
+      <text class="date-text">{{currentDate}}</text>
+      <text class="greeting-title">你好，{{userInfo.nickName || ''}}园丁</text>
+    </view>
+    <view class="avatar-box" bindtap="handleProfileTap">
+      <image class="user-avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill" wx:if="{{userInfo.avatarUrl}}"></image>
+      <text class="icon icon-Scissors" wx:else></text>
+    </view>
+  </view>
+
+  <view class="search-box">
+    <text class="icon icon-search search-icon"></text>
+    <input class="search-input" placeholder="搜索我的植物..." type="text" bindinput="onSearchInput" />
+  </view>
+
+  <view class="summary-card {{isTodoFilter ? 'active' : ''}}" bindtap="toggleTodoFilter">
+    <text class="bg-waterdrop icon icon-penzai"></text>
+    <view class="summary-content">
+      <text class="summary-label">今日待办</text>
+      <block wx:if="{{todoCount > 0}}">
+        <text class="summary-title">今天还有 {{todoCount}} 株植物还没照顾</text>
+        <view class="avatar-group">
+          <image class="mini-avatar-img" wx:for="{{todoPlants}}" wx:key="_id" wx:if="{{index < 3}}" src="{{item.photoFileID}}" mode="aspectFill"></image>
+          <view class="mini-avatar count" wx:if="{{todoCount > 3}}">+{{todoCount - 3}}</view>
+        </view>
+      </block>
+      <block wx:else>
+        <text class="summary-title">今日份的照顾已全部完成 ✨</text>
+        <view class="success-tip">你是一个细心的园丁！</view>
+      </block>
+    </view>
+    <view class="filter-indicator" wx:if="{{isTodoFilter}}">
+      查看全部 <text class="icon icon-close" style="font-size: 20rpx; margin-left: 8rpx;"></text>
+    </view>
+  </view>
+
+  <view class="list-section">
+    <view class="list-header">
+      <text class="list-title">我的绿植 ({{plantList.length || 0}})</text>
+    </view>
+
+    <view class="empty-state" wx:if="{{noResults}}">
+      <text class="empty-text">未搜索到符合条件的植物，试试换个关键词吧～</text>
+    </view>
+
+    <view class="plant-grid" wx:elif="{{plantList.length > 0}}">
+      <view class="plant-card" wx:for="{{plantList}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
+        <view class="card-img-box">
+          <image class="card-img" src="{{item.photoFileID}}" mode="aspectFill" binderror="onImageError" data-id="{{item._id}}"></image>
+        </view>
+        <text class="card-name">{{item.nickname}}</text>
+        <text class="card-desc">{{item.species}} · {{item.location || '室内'}}</text>
+        <view class="card-action">
+          <text class="icon icon-riqi"></text>
+          <text class="action-date">{{item.adoptDate}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="pagination" wx:if="{{!noResults && filteredPlants.length > pageSize}}">
+      <button class="page-btn" bindtap="onPrevPage" disabled="{{page <= 1}}">上一页</button>
+      <text class="page-info">第 {{page}} / {{totalPages}} 页</text>
+      <button class="page-btn" bindtap="onNextPage" disabled="{{page >= totalPages}}">下一页</button>
+    </view>
+  </view>
+
+  <view class="fab-add-btn" bindtap="goToAddPlant">
+    <text class="fab-add-text icon icon-add"></text>
+  </view>
+  
+  <!-- ✨ 高级感：强制登录资料同步遮罩层 -->
+  <view class="login-overlay {{showOverlay ? 'show' : ''}}" wx:if="{{showOverlay}}">
+    <view class="login-glass-bg"></view>
+    <view class="login-content-card">
+      <view class="brand-section">
+        <view class="brand-logo">
+          <text class="icon icon-penzai"></text>
+        </view>
+        <text class="brand-name">植光 · ZhiGuang</text>
+        <text class="brand-slogan">记录每一寸破土而出的生命</text>
+      </view>
+
+      <view class="form-section">
+        <button class="avatar-select-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar" bindtap="handleAvatarTap" disabled="{{isChoosingAvatar}}">
+          <image class="avatar-preview" src="{{tempAvatarUrl || '/images/avatar.png'}}" mode="aspectFill"></image>
+          <view class="avatar-badge">
+            <text class="icon icon-image"></text>
+          </view>
+        </button>
+        <text class="form-hint">点击同步微信头像</text>
+
+        <view class="input-container">
+          <text class="input-label">园丁名</text>
+          <input type="nickname" class="nickname-input" placeholder="输入或同步微信昵称" bindblur="onNicknameBlur" bindinput="onNicknameInput" value="{{tempNickname}}" />
+        </view>
+      </view>
+
+      <button class="start-journey-btn {{canSubmit ? 'active' : ''}}" bindtap="saveUserProfile" disabled="{{!canSubmit}}">
+        <text>开启园丁之旅</text>
+        <text class="icon icon-arrow-left-bold" style="transform: rotate(180deg); margin-left: 12rpx; font-size: 24rpx;"></text>
+      </button>
+      
+      <text class="privacy-tip">登录即代表同意《用户服务与隐私协议》</text>
+    </view>
+  </view>
+
+</view>

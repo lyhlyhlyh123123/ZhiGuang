@@ -1,0 +1,155 @@
+/* 阿里 iconfont - 本地化配置 */
+@font-face {
+  font-family: 'iconfont';
+  src: url('/images/iconfont/iconfont.woff2?t=1774273586757') format('woff2'),
+       url('/images/iconfont/iconfont.woff?t=1774273586757') format('woff'),
+       url('/images/iconfont/iconfont.ttf?t=1774273586757') format('truetype');
+}
+
+.iconfont {
+  font-family: 'iconfont' !important;
+  font-size: 1em;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-stroke-width: 0.2px;
+  -moz-osx-font-smoothing: grayscale;
+  vertical-align: -0.125em;
+  display: inline-block;
+}
+
+/* 为兼容旧代码，保留 .icon 类 */
+.icon {
+  font-family: 'iconfont' !important;
+  font-size: 1em;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-stroke-width: 0.2px;
+  -moz-osx-font-smoothing: grayscale;
+  vertical-align: -0.125em;
+  display: inline-block;
+}
+
+/* 图标定义 - 根据 iconfont.css */
+.icon-yunshudidian:before { content: "\e606"; }
+.icon-xiugaimingcheng:before { content: "\e64c"; }
+.icon-shanchu:before { content: "\e600"; }
+.icon-close:before { content: "\e69a"; }
+.icon-upload:before { content: "\e75d"; }
+.icon-wendu:before { content: "\e602"; }
+.icon-plus:before { content: "\e829"; }
+.icon-share:before { content: "\e86e"; }
+.icon-search:before { content: "\e8ef"; }
+.icon-riqi:before { content: "\e613"; }
+.icon-image:before { content: "\e635"; }
+.icon-edit:before { content: "\e601"; }
+.icon-arrow-left-bold:before { content: "\e685"; }
+.icon-jilu:before { content: "\e810"; }
+.icon-heart:before { content: "\e64d"; }
+.icon-penzai:before { content: "\e66a"; }
+.icon-qingkong:before { content: "\e6f6"; }
+.icon-feiliao:before { content: "\ecbc"; }
+.icon-Scissors:before { content: "\e762"; }
+.icon-sun:before { content: "\e636"; }
+.icon-Water:before { content: "\e92e"; }
+.icon-water:before { content: "\e92e"; } /* 兼容小写 */
+
+/* 通用操作图标别名 (兼容旧代码) */
+.icon-calendar:before { content: "\e613"; }
+.icon-delete:before { content: "\e600"; }
+.icon-back:before { content: "\e685"; }
+.icon-add:before { content: "\e829"; }
+.icon-record:before { content: "\e810"; }
+.icon-temperature:before { content: "\e602"; }
+.icon-repot:before { content: "\e66a"; }
+.icon-bug:before { content: "\e6f6"; }
+
+/* 🌿 植光主题色 - 森系绿为主色调 */
+.icon-edit { color: #8B5CF6; } /* 紫色 - 编辑 */
+.icon-penzai { color: #22C55E; } /* 绿色 - 盆栽/植物 */
+.icon-calendar { color: #F59E0B; } /* 橙色 - 日历 */
+.icon-riqi { color: #F59E0B; } /* 橙色 - 日期 */
+.icon-yunshudidian { color: #0EA5E9; } /* 蓝色 - 位置 */
+.icon-heart { color: #EF4444; } /* 红色 - 心形/亲密度 */
+.icon-Water { color: #3B82F6; } /* 蓝色 - 浇水 */
+.icon-water { color: #3B82F6; } /* 蓝色 - 浇水 (兼容小写) */
+.icon.icon-Water { color: #3B82F6 !important; }
+.icon.icon-water { color: #3B82F6 !important; } /* 兼容小写 */
+.icon-sun { color: #F97316; } /* 橙色 - 太阳 */
+.icon-jilu { color: #10B981; } /* 绿色 - 记录 */
+.icon-share { color: #6366F1; } /* 靛蓝 - 分享 */
+.icon-plus { color: #22C55E; } /* 绿色 - 添加 */
+.icon-close { color: #6B7280; } /* 灰色 - 关闭 */
+.icon-search { color: #6B7280; } /* 灰色 - 搜索 */
+.icon-image { color: #8B5CF6; } /* 紫色 - 图片 */
+.icon-arrow-left-bold { color: #22C55E; } /* 绿色 - 返回 */
+.icon-Scissors { color: #10B981; } /* 绿色 - 剪刀 */
+.icon-upload { color: #3B82F6; } /* 蓝色 - 上传 */
+.icon-wendu { color: #EF4444; } /* 红色 - 温度 */
+.icon-qingkong { color: #EF4444; } /* 红色 - 清空 */
+.icon-feiliao { color: #F59E0B; } /* 橙色 - 料 */
+.icon-xiugaimingcheng { color: #8B5CF6; } /* 紫色 - 修改名称 */
+.icon-shanchu { color: #EF4444; } /* 红色 - 删除 */
+
+/* 色彩主题类 */
+.icon.icon-primary { color: #22C55E !important; }
+.icon.icon-secondary { color: #3B82F6 !important; }
+.icon.icon-danger { color: #EF4444 !important; }
+.icon.icon-warning { color: #F59E0B !important; }
+.icon.icon-neutral { color: #6B7280 !important; }
+
+/* FAB 按钮中的加号 - 强制白色 */
+.fab-add-btn .icon-add { color: #FFFFFF !important; }
+
+/* 🌟 高级感图标配色 - 按使用场景 */
+.icon-back { color: #22C55E; } /* 绿色 - 返回 */
+.icon-record { color: #10B981; } /* 绿色 - 记录 */
+.icon-temperature { color: #EF4444; } /* 红色 - 温度 */
+.icon-repot { color: #22C55E; } /* 绿色 - 换盆 */
+.icon-bug { color: #EF4444; } /* 红色 - 病虫害 */
+
+/* 🔵 绿色系 - 主色调 */
+.icon-green { color: #22C55E !important; }
+.icon-green-dark { color: #166534 !important; }
+.icon-green-light { color: #86EFAC !important; }
+
+/* 🌈 彩色系 - 辅助色 */
+.icon-blue { color: #3B82F6 !important; }
+.icon-blue-dark { color: #1E40AF !important; }
+.icon-blue-light { color: #93C5FD !important; }
+
+.icon-purple { color: #8B5CF6 !important; }
+.icon-purple-dark { color: #6B21A8 !important; }
+.icon-purple-light { color: #D8B4FE !important; }
+
+.icon-orange { color: #F59E0B !important; }
+.icon-orange-dark { color: #92400E !important; }
+.icon-orange-light { color: #FCD34D !important; }
+
+.icon-red { color: #EF4444 !important; }
+.icon-red-dark { color: #991B1B !important; }
+.icon-red-light { color: #FCA5A5 !important; }
+
+.icon-teal { color: #14B8A6 !important; }
+.icon-teal-dark { color: #134E4A !important; }
+.icon-teal-light { color: #99F6E4 !important; }
+
+/* 📱 页面特定图标颜色 */
+/* 首页 */
+.icon.icon-search { color: #6B7280; }
+.icon.icon-Scissors { color: #10B981; }
+
+/* 植物详情页 */
+.icon.icon-edit { color: #8B5CF6; }
+.icon.icon-penzai { color: #22C55E; }
+.icon.icon-calendar { color: #F59E0B; }
+.icon.icon-yunshudidian { color: #0EA5E9; }
+.icon.icon-heart { color: #EF4444; }
+.icon.icon-Water { color: #3B82F6; }
+
+/* 记录页 */
+.icon.icon-jilu { color: #10B981; }
+.icon.icon-image { color: #8B5CF6; }
+
+/* 底部操作栏 */
+.btn-record .icon-jilu { color: #FFFFFF !important; }
+.btn-share .icon-share { color: #FFFFFF !important; }

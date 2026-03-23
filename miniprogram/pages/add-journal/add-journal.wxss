@@ -1,0 +1,256 @@
+/* pages/add-journal/add-journal.wxss */
+page {
+  background-color: #f8faf8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  height: 100vh;
+}
+
+.page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.nav-header {
+  padding: 96rpx 48rpx 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8faf8;
+}
+
+.back-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 36rpx;
+  color: #1F2937;
+}
+
+.nav-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1E3B28;
+}
+
+.placeholder-box { width: 64rpx; }
+
+.selected-plant-card {
+  background-color: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 48rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.03);
+  border: 1rpx solid #F0FDF4;
+}
+
+.plant-info-display {
+  display: flex;
+  align-items: center;
+}
+
+.plant-name-label {
+  font-size: 28rpx;
+  color: #6B7280;
+}
+
+.plant-name-value {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #166534;
+  margin-left: 12rpx;
+}
+
+.scroll-content {
+  flex: 1;
+  padding: 16rpx 48rpx 190rpx;
+  box-sizing: border-box;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1F8A28;
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #43A047;
+  margin-bottom: 30rpx;
+  display: block;
+}
+
+/* 动作网格 */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18rpx;
+  margin-bottom: 50rpx;
+}
+
+.action-item {
+  background-color: #FFFFFF;
+  min-height: 200rpx;
+  border-radius: 26rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16rpx;
+  position: relative;
+  box-shadow: 0 10rpx 30rpx rgba(46, 125, 50, 0.04);
+  border: 4rpx solid transparent;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+/* 选中状态：变色并加边框 */
+.action-item.active {
+  background-color: #E8F5E9;
+  border-color: #43A047;
+  box-shadow: 0 10rpx 30rpx rgba(67, 160, 71, 0.2);
+  transform: scale(1.02);
+}
+
+.action-icon { font-size: 52rpx; margin-bottom: 10rpx; }
+.action-label { font-size: 28rpx; color: #1E3B28; font-weight: 700; }
+
+/* 记录页图标颜色 */
+.icon-Water { color: #3B82F6; }
+.icon-sun { color: #F97316; }
+.icon-feiliao { color: #F59E0B; }
+.icon-Scissors { color: #10B981; }
+.icon-penzai { color: #22C55E; }
+.icon-qingkong { color: #EF4444; }
+.icon-back { color: #22C55E; }
+.icon-plus { color: #FFFFFF; }
+.icon-close { color: #FFFFFF; }
+
+/* 照片选择器升级：延续首页全出血大图质感 */
+.photo-picker {
+  width: 100%;
+  height: 480rpx;
+  background-color: #FFFFFF;
+  border-radius: 36rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  margin-bottom: 60rpx;
+  box-shadow: 0 10rpx 30rpx rgba(46, 125, 50, 0.04);
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.plus { font-size: 80rpx; color: #D1D9D4; font-weight: 200; }
+.text { font-size: 26rpx; color: #A5B1A8; }
+
+.preview-img { width: 100%; height: 100%; }
+
+/* 输入框卡片 */
+.input-card {
+  background-color: #FFFFFF;
+  border-radius: 30rpx;
+  padding: 28rpx;
+  box-shadow: 0 8rpx 24rpx rgba(46, 125, 50, 0.08);
+  margin-bottom: 54rpx;
+}
+
+.plant-picker {
+  background-color: #FFFFFF;
+  border: 1rpx solid #E5E7EB;
+  border-radius: 24rpx;
+  padding: 18rpx 16rpx;
+  margin-bottom: 30rpx;
+}
+
+.picker-value {
+  color: #4A5568;
+  font-size: 28rpx;
+}
+.diary-input {
+  width: 100%;
+  min-height: 220rpx;
+  font-size: 30rpx;
+  color: #2C3E50;
+  border: 1rpx solid #E5E7EB;
+  border-radius: 24rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+}
+
+.word-count {
+  display: block;
+  text-align: right;
+  font-size: 24rpx;
+  color: #BDC3C7;
+  margin-top: 10rpx;
+}
+
+.save-btn {
+  margin-top: 80rpx;
+  background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%);
+  color: white;
+  border-radius: 50rpx;
+  font-weight: bold;
+  box-shadow: 0 16rpx 40rpx rgba(46, 125, 50, 0.2);
+}
+/* 动作项增加选中角标 */
+.action-item { position: relative; }
+.check-badge {
+  position: absolute;
+  top: 10rpx; right: 10rpx;
+  width: 30rpx; height: 30rpx;
+  background-color: #43A047;
+  color: white; font-size: 20rpx;
+  border-radius: 50%;
+  display: flex; justify-content: center; align-items: center;
+}
+
+/* 多图九宫格布局 */
+.image-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+  margin-bottom: 60rpx;
+}
+
+.image-wrapper {
+  width: 100%;
+  height: 100%;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.image-wrapper-img {
+  width: 100%;
+  height: 100%;
+}
+
+.delete-img {
+  position: absolute;
+  top: 0; right: 0;
+  width: 40rpx; height: 40rpx;
+  background: rgba(0,0,0,0.5);
+  color: white; text-align: center; line-height: 36rpx;
+  border-bottom-left-radius: 20rpx;
+}
+
+.add-img-btn {
+  width: 100%;
+  height: 210rpx;
+  background-color: #FFFFFF;
+  border-radius: 20rpx;
+  display: flex; justify-content: center; align-items: center;
+  border: 2rpx dashed #D1D9D4;
+}
+
+.add-img-btn .plus { font-size: 60rpx; color: #BDC3C7; }

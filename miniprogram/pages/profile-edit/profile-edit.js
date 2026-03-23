@@ -1,0 +1,104 @@
+const app = getApp();
+
+Page({
+  data: {
+    userInfo: null,
+    tempAvatarUrl: '',
+    tempNickname: '',
+    canSubmit: false
+  },
+
+  onLoad() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (userInfo) {
+      this.setData({ 
+        userInfo,
+        tempNickname: userInfo.nickName,
+        tempAvatarUrl: userInfo.avatarUrl
+      });
+    } else {
+      this.setData({
+        userInfo: { nickName: '见习', avatarUrl: '' }
+      });
+    }
+    this.checkCanSubmit();
+  },
+
+  onChooseAvatar(e) {
+    const { avatarUrl } = e.detail;
+    this.setData({ tempAvatarUrl: avatarUrl });
+    this.checkCanSubmit();
+  },
+
+  onNicknameInput(e) {
+    this.setData({ tempNickname: e.detail.value });
+    this.checkCanSubmit();
+  },
+
+  onNicknameBlur(e) {
+    this.setData({ tempNickname: e.detail.value });
+    this.checkCanSubmit();
+  },
+
+  checkCanSubmit() {
+    const { tempAvatarUrl, tempNickname } = this.data;
+    const isChanged = tempAvatarUrl !== this.data.userInfo.avatarUrl || 
+                      tempNickname !== this.data.userInfo.nickName;
+    
+    this.setData({
+      canSubmit: !!(tempAvatarUrl && tempNickname.trim() && isChanged)
+    });
+  },
+
+  async saveUserProfile() {
+    const { tempAvatarUrl, tempNickname } = this.data;
+    wx.showLoading({ title: '资料同步中...' });
+
+    try {
+      let finalAvatarUrl = tempAvatarUrl;
+      // 检查是否需要上传新头像到云端
+      if (tempAvatarUrl.startsWith('http://tmp') || tempAvatarUrl.startsWith('wxfile://')) {
+        const cloudPath = `avatars/${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
+        const uploadRes = await wx.cloud.uploadFile({
+          cloudPath,
+          filePath: tempAvatarUrl
+        });
+        finalAvatarUrl = uploadRes.fileID;
+      }
+
+      const newUserInfo = {
+        avatarUrl: finalAvatarUrl,
+        nickName: tempNickname
+      };
+
+      app.globalData.userInfo = newUserInfo;
+      wx.setStorageSync('userInfo', newUserInfo);
+
+      wx.hideLoading();
+      wx.showToast({ title: '资料同步成功', icon: 'success' });
+      
+      setTimeout(() => {
+        wx.navigateBack();
+      }, 1500);
+    } catch (err) {
+      wx.hideLoading();
+      console.error('保存失败', err);
+      wx.showToast({ title: '同步失败，请重试', icon: 'none' });
+    }
+  },
+
+  logout() {
+    wx.showModal({
+      title: '提示',
+      content: '确定要退出登录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          app.globalData.userInfo = null;
+          wx.removeStorageSync('userInfo');
+          wx.showToast({ title: '已退出', icon: 'success' });
+          setTimeout(() => wx.navigateBack(), 1000);
+        }
+      }
+    });
+  }
+});
