@@ -1,9 +1,10 @@
-/* 阿里 iconfont - 本地化配置 */
+/* 阿里 iconfont - 在线链接方式 (真机可用) */
+/* 项目 ID: 5145551 */
 @font-face {
   font-family: 'iconfont';
-  src: url('/images/iconfont/iconfont.woff2?t=1774273586757') format('woff2'),
-       url('/images/iconfont/iconfont.woff?t=1774273586757') format('woff'),
-       url('/images/iconfont/iconfont.ttf?t=1774273586757') format('truetype');
+  src: url('//at.alicdn.com/t/c/font_5145551_dj977wsxio.woff2?t=1774284532745') format('woff2'),
+       url('//at.alicdn.com/t/c/font_5145551_dj977wsxio.woff?t=1774284532745') format('woff'),
+       url('//at.alicdn.com/t/c/font_5145551_dj977wsxio.ttf?t=1774284532745') format('truetype');
 }
 
 .iconfont {
