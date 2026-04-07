@@ -1,0 +1,113 @@
+page { background: #F0FDF4; font-family: -apple-system, sans-serif; }
+.page { padding: 24rpx 28rpx 200rpx; }
+
+/* 顶部操作栏 */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.section-title { font-size: 30rpx; font-weight: 700; color: #166534; margin: 16rpx 0 16rpx; }
+.count-badge {
+  font-size: 22rpx; color: #16A34A;
+  background: #DCFCE7; border-radius: 20rpx;
+  padding: 4rpx 16rpx;
+}
+.sel-btn {
+  padding: 8rpx 20rpx; background: #FFFFFF;
+  border-radius: 20rpx; font-size: 24rpx; color: #16A34A;
+  border: 2rpx solid #BBF7D0;
+}
+
+/* 横向滚动植物选择 */
+.plant-scroll {
+  width: 100%;
+  white-space: nowrap;
+  margin-bottom: 8rpx;
+}
+.plant-scroll-inner {
+  display: inline-flex;
+  gap: 20rpx;
+  padding: 8rpx 4rpx 16rpx;
+}
+.plant-scroll-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 180rpx;
+  flex-shrink: 0;
+  border-radius: 24rpx;
+  background: #FFFFFF;
+  padding: 12rpx 12rpx 16rpx;
+  border: 4rpx solid transparent;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+.plant-scroll-card.selected {
+  border-color: #43A047;
+  box-shadow: 0 8rpx 24rpx rgba(67, 160, 71, 0.2);
+  transform: scale(1.04);
+}
+.scroll-img-wrap {
+  position: relative;
+  width: 156rpx;
+  height: 156rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 12rpx;
+}
+.scroll-img {
+  width: 100%;
+  height: 100%;
+}
+.scroll-name {
+  font-size: 24rpx; font-weight: 700; color: #1E3B28;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 100%; text-align: center;
+}
+
+/* 操作网格 */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+.action-item {
+  background-color: #FFFFFF;
+  min-height: 130rpx;
+  border-radius: 20rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16rpx 12rpx;
+  position: relative;
+  box-shadow: 0 6rpx 20rpx rgba(46, 125, 50, 0.04);
+  border: 4rpx solid transparent;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+.action-item.active {
+  border-color: #43A047;
+  box-shadow: 0 6rpx 20rpx rgba(67, 160, 71, 0.2);
+  transform: scale(1.02);
+}
+.action-icon { font-size: 40rpx; margin-bottom: 8rpx; }
+.action-label { font-size: 24rpx; color: #1E3B28; font-weight: 700; }
+.icon-Water { color: #3B82F6; } .icon-sun { color: #F97316; } .icon-feiliao { color: #F59E0B; }
+.icon-Scissors { color: #10B981; } .icon-penzai { color: #22C55E; } .icon-qingkong { color: #EF4444; }
+
+/* 备注 */
+.note-card { background: #FFFFFF; border-radius: 20rpx; padding: 20rpx; margin-bottom: 8rpx; }
+.note-input { width: 100%; min-height: 100rpx; font-size: 28rpx; color: #374151; }
+
+/* 提交按钮 */
+.submit-btn { width: 100% !important; height: 96rpx; background: #E5E7EB; color: #9CA3AF; border-radius: 48rpx; font-size: 30rpx; font-weight: 700; margin-top: 28rpx; }
+.submit-btn.active { background: linear-gradient(135deg, #22C55E, #16A34A); color: #FFFFFF; box-shadow: 0 12rpx 32rpx rgba(34,197,94,0.3); }

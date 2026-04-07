@@ -1,0 +1,76 @@
+@import '../images/iconfont/iconfont.wxss';
+
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120rpx;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  border-top: 1rpx solid #F0F0F0;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: content-box;
+  z-index: 999;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  padding-top: 12rpx;
+}
+
+.tab-icon {
+  font-size: 44rpx;
+  color: #9CA3AF;
+  line-height: 1;
+}
+
+.tab-item.active .tab-icon {
+  color: #16A34A;
+}
+
+.tab-text {
+  font-size: 20rpx;
+  color: #9CA3AF;
+  line-height: 1;
+}
+
+.tab-item.active .tab-text {
+  color: #16A34A;
+  font-weight: 600;
+}
+
+/* 中间加号凸起 */
+.tab-add {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.add-btn {
+  width: 104rpx;
+  height: 104rpx;
+  background: linear-gradient(135deg, #22C55E, #16A34A);
+  border-radius: 36rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(34, 197, 94, 0.45);
+  border: 6rpx solid #FFFFFF;
+  margin-bottom: 40rpx;
+}
+
+.add-icon {
+  font-size: 52rpx;
+  color: #FFFFFF;
+  line-height: 1;
+}

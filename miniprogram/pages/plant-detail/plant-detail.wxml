@@ -62,15 +62,15 @@
     </view>
 
     <!-- 养护信息区 -->
-    <view class="care-info-section">
-      <view class="care-item" wx:if="{{plantInfo.waterInterval}}">
+    <view class="care-info-section" wx:if="{{plantInfo && plantInfo.waterInterval}}">
+      <view class="care-item">
         <view class="care-label-row">
           <text class="care-icon iconfont icon-Water"></text>
           <text class="care-label">浇水周期</text>
         </view>
-        <text class="care-value">{{plantInfo.waterInterval || 7}}天/次</text>
+        <text class="care-value">{{plantInfo.waterInterval}}天/次</text>
       </view>
-      <view class="care-item" wx:if="{{plantInfo && plantInfo.waterInterval}}">
+      <view class="care-item">
         <view class="care-label-row">
           <text class="care-icon iconfont icon-riqi"></text>
           <text class="care-label">下次浇水</text>
@@ -93,7 +93,7 @@
           </view>
         </view>
         <view class="timeline-content">
-          <view class="timeline-card">
+          <view class="timeline-card" bindlongpress="deleteJournal" data-id="{{item._id}}" data-index="{{index}}">
             <view class="card-header">
               <!-- 渲染动作标签列表 -->
               <view class="action-tag-list" wx:if="{{item.renderActions && item.renderActions.length > 0}}">

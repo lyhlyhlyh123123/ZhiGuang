@@ -17,16 +17,22 @@ Page({
     currentDate: '',
     todoCount: 0,
     todoPlants: [],
+    todoAvatars: [],
     isTodoFilter: false,
   },
 
   onShow() {
+    // 每次显示都清除节流，确保数据最新
+    this._lastFetchTime = 0;
     this.fetchPlants();
     const cachedUserInfo = wx.getStorageSync('userInfo');
     if (cachedUserInfo && cachedUserInfo.nickName) {
       this.setData({ userInfo: cachedUserInfo });
     }
     this.setCurrentDate();
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 0 });
+    }
   },
 
   // 设置当前日期
@@ -77,30 +83,49 @@ Page({
 
   // 去云端拉取植物列表的方法
   fetchPlants() {
+    // 节流：1分钟内不重复请求
+    const now = Date.now();
+    if (this._lastFetchTime && now - this._lastFetchTime < 60000) {
+      return;
+    }
+    this._lastFetchTime = now;
     wx.showNavigationBarLoading();
 
     const app = getApp();
     app.silentLogin().then(openid => {
-      db.collection('plants')
+      // 并行拉取植物列表和今日日记
+      const plantsPromise = db.collection('plants')
         .where({ _openid: openid })
         .orderBy('createTime', 'desc')
         .limit(PLANT_QUERY_LIMIT)
-        .get()
-        .then(async res => {
+        .get();
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const _ = db.command;
+      const journalsPromise = db.collection('journals')
+        .where({ createTime: _.gte(todayStart) })
+        .get();
+
+      Promise.all([plantsPromise, journalsPromise])
+        .then(([plantsRes, journalsRes]) => {
           wx.hideNavigationBarLoading();
-          const rawPlants = res.data || [];
+          const rawPlants = plantsRes.data || [];
+          const todayJournals = journalsRes.data || [];
 
           const allPlants = rawPlants.map(p => ({
             ...p,
             waterCountdown: this.calcWaterCountdown(p)
           }));
 
-          const { todoCount, todoPlants } = await this.calculateTodayTodos(allPlants);
+          const caredPlantIds = [...new Set(todayJournals.map(j => String(j.plantId)))];
+          const todoPlants = allPlants.filter(p => !caredPlantIds.includes(String(p._id)));
 
           this.setData({
             allPlants,
-            todoCount,
+            todoCount: todoPlants.length,
             todoPlants,
+            todoAvatars: todoPlants.slice(0, 3), // 只取前3个用于头像展示
             searchKey: '',
             page: 1,
             isTodoFilter: false
@@ -116,50 +141,6 @@ Page({
   },
 
   /**
-   * ✨ 计算哪些植物今天还没打卡
-   */
-  async calculateTodayTodos(plants) {
-    if (!plants || plants.length === 0) return { todoCount: 0, todoPlants: [] };
-
-    try {
-      // 1. 获取今天零点的时间戳 (本地)
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
-      // 2. 获取今天所有的日记记录
-      const _ = db.command;
-      const journalRes = await db.collection('journals')
-        .where({
-          createTime: _.gte(todayStart)
-        })
-        .get();
-      
-      const todayJournals = journalRes.data || [];
-
-      // 拿到今天已经照顾过的植物 ID 列表 (去重)
-      const caredPlantIds = [...new Set(todayJournals.map(j => String(j.plantId)))];
-
-      // 3. 找出还没照顾过的植物
-      const todoPlants = plants.filter(plant => {
-        const isCared = caredPlantIds.includes(String(plant._id));
-        return !isCared;
-      });
-
-      return {
-        todoCount: todoPlants.length,
-        todoPlants
-      };
-    } catch (err) {
-      console.error('【植光】计算今日待办失败:', err);
-      // 兜底：如果查询失败，认为所有植物都需要打卡
-      return { 
-        todoCount: plants.length, 
-        todoPlants: plants 
-      };
-    }
-  },
-
-  /**
    * ✨ 切换待办（未打卡）筛选模式
    */
   toggleTodoFilter() {
@@ -172,15 +153,14 @@ Page({
     this.applyFilter(isTodoFilter ? 'TODO_CHECKIN' : '');
   },
 
-  // 搜索框输入事件
+  // 搜索框输入事件（防抖 300ms）
   onSearchInput(e) {
     const searchKey = e.detail.value.trim();
-    this.setData({ 
-      searchKey, 
-      page: 1,
-      isTodoFilter: false 
-    });
-    this.applyFilter(searchKey);
+    this.setData({ searchKey, page: 1, isTodoFilter: false });
+    if (this._searchTimer) clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(() => {
+      this.applyFilter(searchKey);
+    }, 300);
   },
 
   // 过滤 + 分页

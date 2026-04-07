@@ -59,6 +59,17 @@ Page({
       this.setData({ plantInfo: plant, isOwner, adoptDays, loading: false });
       wx.setNavigationBarTitle({ title: plant.nickname + '的成长' });
       this._processJournals(journals || []);
+
+      // 提前转换封面图为临时链接，供分享使用
+      if (plant.photoFileID && plant.photoFileID.startsWith('cloud://')) {
+        wx.cloud.getTempFileURL({
+          fileList: [plant.photoFileID]
+        }).then(res => {
+          if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+            this._shareCoverUrl = res.fileList[0].tempFileURL;
+          }
+        }).catch(() => {});
+      }
     }).catch(err => {
       this.setData({ loading: false });
       console.error('【植光】加载失败:', err);
@@ -234,6 +245,34 @@ Page({
     });
   },
 
+  // 长按删除单条日记
+  deleteJournal(e) {
+    if (!this.data.isOwner) return;
+    const { id, index } = e.currentTarget.dataset;
+    wx.showModal({
+      title: '删除记录',
+      content: '确定删除这条养护记录吗？',
+      confirmColor: '#EF4444',
+      success: (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '删除中...' });
+        db.collection('journals').doc(id).remove()
+          .then(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '已删除', icon: 'success' });
+            const journalList = this.data.journalList.filter((_, i) => i !== index);
+            const intimacyScore = this.calcIntimacy(journalList);
+            this.setData({ journalList, intimacy: intimacyScore });
+          })
+          .catch(err => {
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败', icon: 'none' });
+            console.error(err);
+          });
+      }
+    });
+  },
+
   confirmDelete() {
     wx.showModal({
       title: '确认删除',
@@ -267,20 +306,27 @@ Page({
   onShareAppMessage() {
     const { plantInfo, intimacy } = this.data;
     if (!plantInfo) return { title: '植光 - 植物养护记录' };
-    return {
+    const shareObj = {
       title: `看看我养的${plantInfo.nickname}，亲密度已经 ${intimacy}% 啦！`,
-      path: `/pages/plant-detail/plant-detail?id=${this.data.plantId}`,
-      imageUrl: plantInfo.photoFileID
+      path: `/pages/plant-detail/plant-detail?id=${this.data.plantId}`
     };
+    // 使用提前缓存的临时链接作为封面，否则微信自动截图
+    if (this._shareCoverUrl) {
+      shareObj.imageUrl = this._shareCoverUrl;
+    }
+    return shareObj;
   },
 
   onShareTimeline() {
     const { plantInfo, intimacy } = this.data;
     if (!plantInfo) return { title: '植光 - 植物养护记录' };
-    return {
+    const shareObj = {
       title: `${plantInfo.nickname}的成长日记 | 亲密度 ${intimacy}%`,
-      query: `id=${this.data.plantId}`,
-      imageUrl: plantInfo.photoFileID
+      query: `id=${this.data.plantId}`
     };
+    if (this._shareCoverUrl) {
+      shareObj.imageUrl = this._shareCoverUrl;
+    }
+    return shareObj;
   }
 });

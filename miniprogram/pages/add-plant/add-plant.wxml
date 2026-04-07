@@ -68,17 +68,6 @@
           </view>
         </view>
       </view>
-
-      <view class="setting-item no-border">
-        <view class="setting-info">
-          <view class="setting-icon bg-orange icon icon-add"></view>
-          <view class="setting-text">
-            <text class="setting-name">开启提醒</text>
-            <text class="setting-desc">缺水时系统主动推送</text>
-          </view>
-        </view>
-        <switch checked="{{remindEnabled}}" bindchange="onRemindChange" color="#22C55E" />
-      </view>
       
     </view>
 

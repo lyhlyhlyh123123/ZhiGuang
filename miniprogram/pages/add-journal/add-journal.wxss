@@ -108,9 +108,8 @@ page {
   transition: all 0.2s ease;
 }
 
-/* 选中状态：变色并加边框 */
+/* 选中状态：只加边框 */
 .action-item.active {
-  background-color: #E8F5E9;
   border-color: #43A047;
   box-shadow: 0 10rpx 30rpx rgba(67, 160, 71, 0.2);
   transform: scale(1.02);

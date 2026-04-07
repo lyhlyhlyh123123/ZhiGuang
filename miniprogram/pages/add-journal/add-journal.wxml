@@ -38,7 +38,8 @@
       <image 
         class="image-wrapper-img"
         src="{{item}}" 
-        mode="aspectFill" 
+        mode="aspectFill"
+        lazy-load
         bindtap="previewImage" 
         data-url="{{item}}"
       ></image>

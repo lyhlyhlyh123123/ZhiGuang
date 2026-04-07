@@ -1,0 +1,55 @@
+<view class="page">
+  <view class="month-nav">
+    <view class="nav-arrow" bindtap="prevMonth">‹</view>
+    <text class="month-title">{{year}}年{{month}}月</text>
+    <view class="nav-arrow" bindtap="nextMonth">›</view>
+  </view>
+
+  <view class="week-header">
+    <text wx:for="{{['日','一','二','三','四','五','六']}}" wx:key="*this" class="week-label">{{item}}</text>
+  </view>
+
+  <view class="calendar-grid">
+    <view
+      wx:for="{{calendarDays}}" wx:key="index"
+      class="day-cell {{item.empty ? 'empty' : ''}} {{item.isToday ? 'today' : ''}} {{item.dateStr === selectedDate ? 'selected' : ''}}"
+      bindtap="selectDay" data-date="{{item.dateStr}}"
+    >
+      <text class="day-num" wx:if="{{!item.empty}}">{{item.day}}</text>
+      <view class="dot" wx:if="{{item.count > 0}}"></view>
+    </view>
+  </view>
+
+  <view class="day-detail" wx:if="{{selectedDate}}">
+    <text class="detail-title">{{selectedDate}} 的记录</text>
+    <view wx:if="{{dayJournals.length === 0}}" class="no-record">
+      <text>这天没有养护记录</text>
+    </view>
+    <view class="journal-item" wx:for="{{dayJournals}}" wx:key="_id" bindtap="goToDetail" data-id="{{item.plantId}}">
+      <view class="journal-header">
+        <view class="journal-plant-info">
+          <text class="journal-plant">{{item.plantName}}</text>
+          <text class="journal-meta" wx:if="{{item.species || item.location}}">{{item.species}}{{item.species && item.location ? ' · ' : ''}}{{item.location}}</text>
+        </view>
+        <text class="journal-time">{{item.formatTime}}</text>
+      </view>
+      <view class="journal-actions" wx:if="{{item.selectedActions && item.selectedActions.length > 0}}">
+        <view class="action-tag" wx:for="{{item.selectedActions}}" wx:for-item="a" wx:key="label">
+          <text class="action-tag-label">{{a.label}}</text>
+        </view>
+      </view>
+      <text class="journal-note" wx:if="{{item.note}}">{{item.note}}</text>
+      <!-- 照片预览 -->
+      <view class="journal-photos" wx:if="{{item.photoList && item.photoList.length > 0}}">
+        <image
+          wx:for="{{item.photoList}}" wx:for-item="img" wx:key="*this"
+          class="journal-photo"
+          src="{{img}}" mode="aspectFill"
+          catchtap="previewImg"
+          data-src="{{img}}"
+          data-list="{{item.photoList}}"
+        ></image>
+      </view>
+    </view>
+  </view>
+</view>

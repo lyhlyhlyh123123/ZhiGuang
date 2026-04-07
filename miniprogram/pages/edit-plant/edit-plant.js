@@ -16,37 +16,42 @@ Page({
   onLoad(options) {
     const id = options.id;
     this.setData({ plantId: id });
-    this.fetchOldData(id); // 一进页面，立刻拉取老数据回显
+    // 等 silentLogin 完成后再拉数据，确保 openid 可用
+    const app = getApp();
+    app.silentLogin().then(() => {
+      this.fetchOldData(id);
+    }).catch(() => {
+      this.fetchOldData(id); // 登录失败也尝试加载，权限校验会在 fetchOldData 里处理
+    });
   },
 
   // 1. 拉取老数据填入表单
   fetchOldData(id) {
     wx.showLoading({ title: '加载资料...' });
-    const app = getApp();
-    // 等 openid 就绪后再拉取，确保 owner 校验准确
-    app.silentLogin().then(openid => {
-      db.collection('plants').doc(id).get().then(res => {
-        wx.hideLoading();
-        const data = res.data;
-        if (data._openid && data._openid !== openid) {
-          wx.showToast({ title: '无权编辑此植物', icon: 'none' });
-          setTimeout(() => wx.navigateBack(), 1500);
-          return;
-        }
-        this.setData({
-          nickname: data.nickname,
-          species: data.species,
-          location: data.location || '',
-          adoptDate: data.adoptDate,
-          waterInterval: data.waterInterval || 7,
-          tempImagePath: data.photoFileID,
-          originalFileID: data.photoFileID
-        });
-      }).catch(err => {
-        wx.hideLoading();
-        console.error('【植光】加载植物资料失败:', err);
-        wx.showToast({ title: '加载失败，请返回重试', icon: 'none' });
+    db.collection('plants').doc(id).get().then(res => {
+      wx.hideLoading();
+      const data = res.data;
+      // 校验是否是本人的植物
+      const app = getApp();
+      const openid = app.globalData.openid;
+      if (openid && data._openid && data._openid !== openid) {
+        wx.showToast({ title: '无权编辑此植物', icon: 'none' });
+        setTimeout(() => wx.navigateBack(), 1500);
+        return;
+      }
+      this.setData({
+        nickname: data.nickname,
+        species: data.species,
+        location: data.location || '',
+        adoptDate: data.adoptDate,
+        waterInterval: data.waterInterval || 7,
+        tempImagePath: data.photoFileID,
+        originalFileID: data.photoFileID
       });
+    }).catch(err => {
+      wx.hideLoading();
+      console.error('【植光】加载植物资料失败:', err);
+      wx.showToast({ title: '加载失败，请返回重试', icon: 'none' });
     });
   },
 

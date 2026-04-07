@@ -65,9 +65,11 @@ App({
         const newOpenid = res.result.openid;
         this.globalData.openid = newOpenid;
         wx.setStorageSync('openid', newOpenid);
+        this.loginPromise = null; // 登录成功后清除缓存，允许重试
         resolve(newOpenid);
       }).catch(err => {
         console.error('【植光】❌ 云端鉴权失败', err);
+        this.loginPromise = null; // 失败也清除，允许重试
         reject(err);
       });
     });
