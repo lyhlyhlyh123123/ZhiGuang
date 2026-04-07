@@ -1,110 +1,145 @@
 <view class="page-container">
-  
-  <view class="header-bar">
-    <view class="greeting-box">
-      <text class="date-text">{{currentDate}}</text>
-      <text class="greeting-title">你好，{{userInfo.nickName || ''}}园丁</text>
-    </view>
-    <view class="avatar-box" bindtap="handleProfileTap">
-      <image class="user-avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill" wx:if="{{userInfo.avatarUrl}}"></image>
-      <text class="icon icon-Scissors" wx:else></text>
-    </view>
-  </view>
 
-  <view class="search-box">
-    <text class="icon icon-search search-icon"></text>
-    <input class="search-input" placeholder="搜索我的植物..." type="text" bindinput="onSearchInput" />
-  </view>
-
-  <view class="summary-card {{isTodoFilter ? 'active' : ''}}" bindtap="toggleTodoFilter">
-    <text class="bg-waterdrop icon icon-penzai"></text>
-    <view class="summary-content">
-      <text class="summary-label">今日待办</text>
-      <block wx:if="{{todoCount > 0}}">
-        <text class="summary-title">今天还有 {{todoCount}} 株植物还没照顾</text>
-        <view class="avatar-group">
-          <image class="mini-avatar-img" wx:for="{{todoPlants}}" wx:key="_id" wx:if="{{index < 3}}" src="{{item.photoFileID}}" mode="aspectFill"></image>
-          <view class="mini-avatar count" wx:if="{{todoCount > 3}}">+{{todoCount - 3}}</view>
+  <!-- 顶部 Hero 区域 -->
+  <view class="hero-section">
+    <view class="hero-bg-deco">
+      <view class="deco-circle deco-circle-1"></view>
+      <view class="deco-circle deco-circle-2"></view>
+      <view class="deco-leaf">🌿</view>
+    </view>
+    <view class="header-bar">
+      <view class="greeting-box">
+        <text class="date-text">{{currentDate}}</text>
+        <text class="greeting-title">你好，</text>
+        <text class="greeting-name">{{userInfo && userInfo.nickName ? userInfo.nickName : ''}}园丁 👋</text>
+      </view>
+      <view class="avatar-box" bindtap="handleProfileTap">
+        <image class="user-avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill" wx:if="{{userInfo && userInfo.avatarUrl}}"></image>
+        <view wx:else class="guest-avatar">
+          <text class="icon icon-penzai" style="font-size: 36rpx; color: #22C55E;"></text>
         </view>
-      </block>
-      <block wx:else>
-        <text class="summary-title">今日份的照顾已全部完成 ✨</text>
-        <view class="success-tip">你是一个细心的园丁！</view>
-      </block>
+        <view class="avatar-ring"></view>
+      </view>
     </view>
-    <view class="filter-indicator" wx:if="{{isTodoFilter}}">
-      查看全部 <text class="icon icon-close" style="font-size: 20rpx; margin-left: 8rpx;"></text>
+
+    <!-- 待办卡片嵌入 Hero -->
+    <view class="summary-card {{isTodoFilter ? 'active' : ''}}" bindtap="toggleTodoFilter">
+      <view class="summary-left">
+        <view class="summary-icon-wrap">
+          <text class="icon icon-penzai summary-icon"></text>
+        </view>
+        <view class="summary-content">
+          <text class="summary-label">今日待办</text>
+          <block wx:if="{{todoCount > 0}}">
+            <text class="summary-title">还有 <text class="summary-count">{{todoCount}}</text> 株待照顾</text>
+          </block>
+          <block wx:else>
+            <text class="summary-title">今日照顾全完成 ✨</text>
+          </block>
+        </view>
+      </view>
+      <view class="summary-right">
+        <block wx:if="{{todoCount > 0}}">
+          <view class="avatar-group">
+            <image class="mini-avatar-img" wx:for="{{todoPlants}}" wx:key="_id" wx:if="{{index < 3}}" src="{{item.photoFileID}}" mode="aspectFill"></image>
+            <view class="mini-avatar-count" wx:if="{{todoCount > 3}}">+{{todoCount - 3}}</view>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="all-done-badge">
+            <text class="all-done-text">全部完成</text>
+          </view>
+        </block>
+        <view class="filter-tag" wx:if="{{isTodoFilter}}">
+          <text>收起</text>
+          <text class="icon icon-close" style="font-size: 18rpx;"></text>
+        </view>
+      </view>
     </view>
   </view>
 
+  <!-- 搜索框 -->
+  <view class="search-wrap">
+    <view class="search-box {{isTodoFilter ? 'search-box-active' : ''}}">
+      <text class="icon icon-search search-icon"></text>
+      <input class="search-input" placeholder="{{isTodoFilter ? '正在查看今日待办植物...' : '搜索植物名称或品种...'}}" type="text" bindinput="onSearchInput" value="{{searchKey}}" />
+    </view>
+  </view>
+
+  <!-- 植物列表区 -->
   <view class="list-section">
     <view class="list-header">
-      <text class="list-title">我的绿植 ({{plantList.length || 0}})</text>
+      <view class="list-title-row">
+        <view class="list-title-dot"></view>
+        <text class="list-title">我的绿植</text>
+        <view class="plant-count-badge">{{allPlants.length || 0}}</view>
+      </view>
     </view>
 
-    <view class="empty-state" wx:if="{{noResults}}">
-      <text class="empty-text">未搜索到符合条件的植物，试试换个关键词吧～</text>
+    <!-- 空状态：无植物 -->
+    <view class="empty-state" wx:if="{{noPlants && !noResults}}">
+      <view class="empty-illustration">🌱</view>
+      <text class="empty-title">还没有植物</text>
+      <text class="empty-desc">点击下方 + 按钮，添加你的第一株绿植吧</text>
     </view>
 
+    <!-- 空状态：搜索无结果 -->
+    <view class="empty-state" wx:elif="{{noResults}}">
+      <view class="empty-illustration">🔍</view>
+      <text class="empty-title">没找到相关植物</text>
+      <text class="empty-desc">试试换个关键词搜索吧～</text>
+    </view>
+
+    <!-- 植物卡片网格 -->
     <view class="plant-grid" wx:elif="{{plantList.length > 0}}">
       <view class="plant-card" wx:for="{{plantList}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
+        <!-- 图片区（纯净，无遮挡） -->
         <view class="card-img-box">
           <image class="card-img" src="{{item.photoFileID}}" mode="aspectFill" binderror="onImageError" data-id="{{item._id}}"></image>
         </view>
-        <text class="card-name">{{item.nickname}}</text>
-        <text class="card-desc">{{item.species}} · {{item.location || '室内'}}</text>
-        <view class="card-action">
-          <text class="icon icon-riqi"></text>
-          <text class="action-date">{{item.adoptDate}}</text>
+        <!-- 信息区 -->
+        <view class="card-body">
+          <view class="card-name-row">
+            <text class="card-name">{{item.nickname}}</text>
+            <view class="card-species-tag">
+              <text class="icon icon-penzai" style="font-size: 18rpx; color: #22C55E; margin-right: 4rpx;"></text>
+              <text class="card-species-text">{{item.species || '未知'}}</text>
+            </view>
+          </view>
+          <!-- 地点行 -->
+          <view class="card-location-row" wx:if="{{item.location}}">
+            <text class="icon icon-yunshudidian card-loc-icon" style="color: #22C55E;"></text>
+            <text class="card-loc-text">{{item.location}}</text>
+          </view>
+          <view class="card-divider"></view>
+          <view class="card-footer">
+            <view class="card-date-row">
+              <text class="icon icon-riqi card-date-icon"></text>
+              <text class="card-date">{{item.adoptDate}}</text>
+            </view>
+            <!-- 浇水倒计时 -->
+            <view class="water-badge {{item.waterCountdown <= 0 ? 'water-badge-urgent' : ''}}">
+              <text class="icon icon-water water-badge-icon"></text>
+              <text class="water-badge-text" wx:if="{{item.waterCountdown > 0}}">{{item.waterCountdown}}天后</text>
+              <text class="water-badge-text" wx:elif="{{item.waterCountdown === 0}}">今天浇</text>
+              <text class="water-badge-text" wx:else>逾期{{-item.waterCountdown}}天</text>
+            </view>
+          </view>
         </view>
       </view>
     </view>
 
+    <!-- 分页 -->
     <view class="pagination" wx:if="{{!noResults && filteredPlants.length > pageSize}}">
       <button class="page-btn" bindtap="onPrevPage" disabled="{{page <= 1}}">上一页</button>
-      <text class="page-info">第 {{page}} / {{totalPages}} 页</text>
+      <text class="page-info">{{page}} / {{totalPages}}</text>
       <button class="page-btn" bindtap="onNextPage" disabled="{{page >= totalPages}}">下一页</button>
     </view>
   </view>
 
+  <!-- 悬浮添加按钮 -->
   <view class="fab-add-btn" bindtap="goToAddPlant">
     <text class="fab-add-text icon icon-add"></text>
-  </view>
-  
-  <!-- ✨ 高级感：强制登录资料同步遮罩层 -->
-  <view class="login-overlay {{showOverlay ? 'show' : ''}}" wx:if="{{showOverlay}}">
-    <view class="login-glass-bg"></view>
-    <view class="login-content-card">
-      <view class="brand-section">
-        <view class="brand-logo">
-          <text class="icon icon-penzai"></text>
-        </view>
-        <text class="brand-name">植光 · ZhiGuang</text>
-        <text class="brand-slogan">记录每一寸破土而出的生命</text>
-      </view>
-
-      <view class="form-section">
-        <button class="avatar-select-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar" bindtap="handleAvatarTap" disabled="{{isChoosingAvatar}}">
-          <image class="avatar-preview" src="{{tempAvatarUrl || '/images/avatar.png'}}" mode="aspectFill"></image>
-          <view class="avatar-badge">
-            <text class="icon icon-image"></text>
-          </view>
-        </button>
-        <text class="form-hint">点击同步微信头像</text>
-
-        <view class="input-container">
-          <text class="input-label">园丁名</text>
-          <input type="nickname" class="nickname-input" placeholder="输入或同步微信昵称" bindblur="onNicknameBlur" bindinput="onNicknameInput" value="{{tempNickname}}" />
-        </view>
-      </view>
-
-      <button class="start-journey-btn {{canSubmit ? 'active' : ''}}" bindtap="saveUserProfile" disabled="{{!canSubmit}}">
-        <text>开启园丁之旅</text>
-        <text class="icon icon-arrow-left-bold" style="transform: rotate(180deg); margin-left: 12rpx; font-size: 24rpx;"></text>
-      </button>
-      
-      <text class="privacy-tip">登录即代表同意《用户服务与隐私协议》</text>
-    </view>
   </view>
 
 </view>

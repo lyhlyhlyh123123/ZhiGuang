@@ -41,9 +41,9 @@ Page({
   },
 
   checkCanSubmit() {
-    const { tempAvatarUrl, tempNickname } = this.data;
-    const isChanged = tempAvatarUrl !== this.data.userInfo.avatarUrl || 
-                      tempNickname !== this.data.userInfo.nickName;
+    const { tempAvatarUrl, tempNickname, userInfo } = this.data;
+    const isChanged = tempAvatarUrl !== (userInfo && userInfo.avatarUrl) || 
+                      tempNickname !== (userInfo && userInfo.nickName);
     
     this.setData({
       canSubmit: !!(tempAvatarUrl && tempNickname.trim() && isChanged)
@@ -94,7 +94,10 @@ Page({
       success: (res) => {
         if (res.confirm) {
           app.globalData.userInfo = null;
+          app.globalData.openid = null;
+          app.loginPromise = null; // 重置登录 Promise，下次重新走登录流程
           wx.removeStorageSync('userInfo');
+          wx.removeStorageSync('openid');
           wx.showToast({ title: '已退出', icon: 'success' });
           setTimeout(() => wx.navigateBack(), 1000);
         }

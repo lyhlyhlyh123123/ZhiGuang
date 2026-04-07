@@ -54,12 +54,12 @@
     <view class="section-title mt-8">养护设定</view>
     <view class="settings-card">
       
-      <view class="setting-item">
+      <view class="setting-item no-border">
         <view class="setting-info">
           <view class="setting-icon bg-blue icon icon-water"></view>
           <view class="setting-text">
             <text class="setting-name">浇水周期</text>
-            <text class="setting-desc">目前设定: {{waterInterval}} 天/次</text>
+            <text class="setting-desc">每隔 {{waterInterval}} 天浇一次水</text>
           </view>
         </view>
         <view class="stepper">
@@ -69,17 +69,6 @@
             <text class="icon icon-plus" style="font-size: 24rpx;"></text>
           </view>
         </view>
-      </view>
-
-      <view class="setting-item no-border">
-        <view class="setting-info">
-          <view class="setting-icon bg-orange icon icon-add"></view>
-          <view class="setting-text">
-            <text class="setting-name">开启提醒</text>
-            <text class="setting-desc">缺水时系统主动推送</text>
-          </view>
-        </view>
-        <switch checked="{{remindEnabled}}" bindchange="onRemindChange" color="#22C55E" />
       </view>
       
     </view>

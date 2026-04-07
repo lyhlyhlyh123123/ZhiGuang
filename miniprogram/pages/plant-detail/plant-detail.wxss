@@ -173,6 +173,22 @@ page {
   box-shadow: 0 4rpx 12rpx rgba(34, 197, 94, 0.3);
 }
 
+.edit-btn.btn-danger {
+  background: linear-gradient(135deg, #FCA5A5 0%, #EF4444 100%);
+  box-shadow: 0 4rpx 12rpx rgba(239, 68, 68, 0.3);
+}
+
+.edit-btn.btn-danger .edit-text {
+  color: #FFFFFF;
+  font-size: 32rpx;
+}
+
+.name-actions {
+  display: flex;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+
 .edit-text {
   font-size: 26rpx;
   color: #6B7280;
@@ -362,18 +378,50 @@ page {
 .action-tag .icon-image { color: #8B5CF6; }
 .action-tag .icon-jilu { color: #10B981; }
 
+/* 时间轴动作标签图标 */
+.action-tag-icon {
+  font-size: 24rpx;
+  margin-right: 6rpx;
+}
+.action-tag .icon-Water { color: #3B82F6; }
+.action-tag .icon-sun { color: #F97316; }
+.action-tag .icon-feiliao { color: #F59E0B; }
+.action-tag .icon-Scissors { color: #10B981; }
+.action-tag .icon-penzai { color: #22C55E; }
+.action-tag .icon-qingkong { color: #EF4444; }
+
 .action-label {
-  font-size: 20rpx;
+  font-size: 26rpx;
   color: #166534;
   font-weight: 500;
 }
 
-.action-title { font-size: 24rpx; font-weight: bold; color: #374151; }
-.action-date { font-size: 20rpx; color: #9CA3AF; margin-left: 16rpx; white-space: nowrap; }
-.action-note { font-size: 20rpx; color: #6B7280; display: block; margin-top: 8rpx;}
+.action-title { font-size: 28rpx; font-weight: bold; color: #374151; }
+.action-date { font-size: 24rpx; color: #9CA3AF; margin-left: 16rpx; white-space: nowrap; }
+.action-note { font-size: 28rpx; color: #6B7280; display: block; margin-top: 8rpx;}
 
-.photo-preview { display: flex; gap: 12rpx; margin-top: 16rpx; flex-wrap: wrap; }
-.mini-img { width: 100rpx; height: 100rpx; border-radius: 16rpx; margin-top: 16rpx;}
+.photo-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8rpx;
+  margin-top: 16rpx;
+}
+
+.journal-img-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  border-radius: 12rpx;
+  overflow: hidden;
+  background: #F0FDF4;
+}
+
+.journal-img {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+}
 
 /* 5. 底部固定栏 */
 .bottom-action-bar {
@@ -431,4 +479,66 @@ page {
 .btn-share::after,
 .btn-record::after {
   border: none;
+}
+
+/* 骨架屏 */
+@keyframes shimmer {
+  0% { background-position: -750rpx 0; }
+  100% { background-position: 750rpx 0; }
+}
+
+.skeleton-wrap {
+  min-height: 100vh;
+  background: #f8faf8;
+}
+
+.skeleton-hero {
+  width: 100%;
+  height: 640rpx;
+  background: linear-gradient(90deg, #e8f5e9 25%, #d0ead2 50%, #e8f5e9 75%);
+  background-size: 750rpx 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-card {
+  background: #FFFFFF;
+  margin-top: -40rpx;
+  border-radius: 64rpx 64rpx 0 0;
+  padding: 64rpx 48rpx;
+  min-height: 60vh;
+}
+
+.skeleton-line {
+  height: 28rpx;
+  border-radius: 14rpx;
+  background: linear-gradient(90deg, #e8f5e9 25%, #d0ead2 50%, #e8f5e9 75%);
+  background-size: 750rpx 100%;
+  animation: shimmer 1.4s infinite;
+  margin-bottom: 24rpx;
+  width: 100%;
+}
+
+.skeleton-title {
+  height: 48rpx;
+  width: 50%;
+  margin-bottom: 40rpx;
+}
+
+.skeleton-short {
+  width: 40%;
+}
+
+.skeleton-tags {
+  display: flex;
+  gap: 24rpx;
+  margin-bottom: 40rpx;
+}
+
+.skeleton-tag {
+  flex: 1;
+  height: 120rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(90deg, #e8f5e9 25%, #d0ead2 50%, #e8f5e9 75%);
+  background-size: 750rpx 100%;
+  animation: shimmer 1.4s infinite;
 }

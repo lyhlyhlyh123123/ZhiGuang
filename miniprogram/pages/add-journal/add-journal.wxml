@@ -34,7 +34,7 @@
 
   <view class="section-title">上传瞬间 (最多 9 张)</view>
   <view class="image-list">
-    <view class="image-wrapper" wx:for="{{tempImagePaths}}" wx:key="*this">
+    <view class="image-wrapper" wx:for="{{tempImagePaths}}" wx:key="index">
       <image 
         class="image-wrapper-img"
         src="{{item}}" 

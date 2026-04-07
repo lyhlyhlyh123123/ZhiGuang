@@ -4,10 +4,8 @@ Page({
   data: {
     plantId: '',
     plantName: '',
-    selectedPlantIndex: 0,
-    plantOptions: [],
     note: '',
-    tempImagePaths: [], // 存储多张本地路径
+    tempImagePaths: [],
     actions: [
       { label: '浇水', value: 'water', icon: 'icon-Water', selected: true },
       { label: '晒太阳', value: 'sun', icon: 'icon-sun', selected: false },
@@ -21,12 +19,9 @@ Page({
   onLoad(options) {
     const selectedId = options.id || '';
     const selectedName = options.name || '';
-    
+
     if (!selectedId) {
-      wx.showToast({
-        title: '未指定植物',
-        icon: 'none'
-      });
+      wx.showToast({ title: '未指定植物', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1500);
       return;
     }
@@ -37,30 +32,30 @@ Page({
   // 选择多张照片
   chooseImage() {
     wx.chooseMedia({
-      count: 9 - this.data.tempImagePaths.length, // 剩余可传数量
+      count: 9 - this.data.tempImagePaths.length,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
     }).then(res => {
       const newPaths = res.tempFiles.map(file => file.tempFilePath);
-      this.setData({
-        tempImagePaths: this.data.tempImagePaths.concat(newPaths)
-      });
+      this.setData({ tempImagePaths: this.data.tempImagePaths.concat(newPaths) });
+    }).catch(err => {
+      console.error('【植光】选择照片失败:', err);
     });
   },
 
   // 删除某张图
   deleteImage(e) {
     const index = e.currentTarget.dataset.index;
-    const list = this.data.tempImagePaths;
+    const list = [...this.data.tempImagePaths];
     list.splice(index, 1);
     this.setData({ tempImagePaths: list });
   },
 
-  // ✨ 放大预览照片
+  // 放大预览照片
   previewImage(e) {
     wx.previewImage({
-      current: e.currentTarget.dataset.url, // 当前显示图片的http链接
-      urls: this.data.tempImagePaths // 需要预览的图片http链接列表
+      current: e.currentTarget.dataset.url,
+      urls: this.data.tempImagePaths
     });
   },
 
@@ -68,7 +63,7 @@ Page({
     this.setData({ note: e.detail.value });
   },
 
-  // ✨ 新增：切换养护动作选中状态
+  // 切换养护动作选中状态
   toggleAction(e) {
     const { index } = e.currentTarget.dataset;
     const actions = this.data.actions;
@@ -76,20 +71,26 @@ Page({
     this.setData({ actions });
   },
 
-  // 提交保存（核心：多图异步上传）
+  // 提交保存
   async submitJournal() {
+    if (this._submitting) return;
+    this._submitting = true;
+
     const selectedActions = this.data.actions.filter(a => a.selected);
     if (selectedActions.length === 0) {
+      this._submitting = false;
       wx.showToast({ title: '请至少选一个动作', icon: 'none' });
       return;
     }
 
     if (!this.data.note.trim()) {
+      this._submitting = false;
       wx.showToast({ title: '请填写记录内容', icon: 'none' });
       return;
     }
 
     if (!this.data.plantId) {
+      this._submitting = false;
       wx.showToast({ title: '请选择要记录的植物', icon: 'none' });
       return;
     }
@@ -97,22 +98,20 @@ Page({
     wx.showLoading({ title: '正在同步云端...' });
 
     try {
-      // 1. 循环上传所有图片
+      // 上传所有图片
       const uploadTasks = this.data.tempImagePaths.map((path, index) => {
-        const cloudPath = `journal/${Date.now()}-${index}.jpg`;
+        const cloudPath = `journal/${Date.now()}-${index}-${Math.floor(Math.random() * 100000)}.jpg`;
         return wx.cloud.uploadFile({ cloudPath, filePath: path });
       });
 
       const uploadResults = await Promise.all(uploadTasks);
       const fileIDs = uploadResults.map(res => res.fileID);
 
-      // 2. 拼装动作列表（保存原始图标与标签）
       const selectedActionList = selectedActions.map(a => ({
         label: a.label,
         icon: a.icon
       }));
 
-      // 3. 存入数据库
       await db.collection('journals').add({
         data: {
           plantId: this.data.plantId,
@@ -125,11 +124,14 @@ Page({
         }
       });
 
-      // ✨ 如果勾选了“浇水”，且开启了提醒，尝试申请一次订阅消息权限
-      const hasWatering = selectedActionList.some(a => a.label === '浇水');
-      if (hasWatering) {
-        console.log('【植光】检测到浇水动作，准备触发订阅消息提醒申请...');
-        this.requestSubscribeMessage();
+      // 如果本次有浇水动作，重置植物的 lastWaterDate
+      const hasWater = selectedActions.some(a => a.label === '浇水');
+      if (hasWater) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        await db.collection('plants').doc(this.data.plantId).update({
+          data: { lastWaterDate: today, updateTime: db.serverDate() }
+        });
       }
 
       wx.hideLoading();
@@ -137,37 +139,14 @@ Page({
       setTimeout(() => wx.navigateBack(), 1500);
 
     } catch (err) {
+      this._submitting = false;
       wx.hideLoading();
+      wx.showToast({ title: '保存失败，请重试', icon: 'none' });
       console.error(err);
     }
-  },
-
-  // ✨ 申请订阅消息权限（预留接口）
-  requestSubscribeMessage() {
-    // 模板 ID 需要在小程序后台申请，这里先写逻辑
-    const TEMPLATE_ID = ''; // 需填入实际的模板ID
-    
-    if (!TEMPLATE_ID) {
-      console.warn('【植光】未配置订阅消息模板ID，跳过申请');
-      return;
-    }
-
-    wx.requestSubscribeMessage({
-      tmplIds: [TEMPLATE_ID],
-      success(res) {
-        console.log('【植光】订阅消息申请结果:', res);
-        if (res[TEMPLATE_ID] === 'accept') {
-          wx.showToast({ title: '提醒已开启', icon: 'success' });
-        }
-      },
-      fail(err) {
-        console.error('【植光】订阅消息申请失败:', err);
-      }
-    });
   },
 
   goBack() {
     wx.navigateBack({ delta: 1 });
   }
-
 });

@@ -29,13 +29,9 @@ App({
    * 动态加载 iconfont 字体
    */
   loadCustomFont: function() {
-    console.log('【植光】正在加载自定义字体...');
     wx.loadFontFace({
       family: 'ZhiGuangIcon',
       source: 'url("https://at.alicdn.com/t/c/font_5145551_jxs5d9wb1xg.ttf?t=1774248023081")',
-      success: res => {
-        console.log('【植光】✅ 字体加载成功:', res.status);
-      },
       fail: err => {
         console.error('【植光】❌ 字体加载失败:', err);
       }
@@ -56,7 +52,6 @@ App({
       const userInfo = wx.getStorageSync('userInfo');
       
       if (openid) {
-        console.log('【植光】⚡ 缓存命中，已读取本地 OpenID:', openid);
         this.globalData.openid = openid;
         if (userInfo) {
           this.globalData.userInfo = userInfo;
@@ -64,12 +59,9 @@ App({
         return resolve(openid);
       }
 
-      console.log('【植光】☁️ 缓存未命中，开始请求云端鉴权...');
-      
       wx.cloud.callFunction({
         name: 'login'
       }).then(res => {
-        console.log('【植光】✅ 云端鉴权成功，返回结果:', res);
         const newOpenid = res.result.openid;
         this.globalData.openid = newOpenid;
         wx.setStorageSync('openid', newOpenid);

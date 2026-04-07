@@ -3,15 +3,14 @@ const db = wx.cloud.database();
 
 Page({
   data: {
-    plantId: '', // 保存当前正在编辑的植物 ID
+    plantId: '',
     nickname: '',
     species: '',
-    location: '', // ✨ 新增：摆放位置
+    location: '',
     adoptDate: '',
-    waterInterval: 7, // ✨ 新增：浇水周期
-    remindEnabled: true, // ✨ 新增：提醒开关
+    waterInterval: 7,
     tempImagePath: '', 
-    originalFileID: '', // 记住原本的云端图片ID
+    originalFileID: '',
   },
 
   onLoad(options) {
@@ -23,18 +22,30 @@ Page({
   // 1. 拉取老数据填入表单
   fetchOldData(id) {
     wx.showLoading({ title: '加载资料...' });
-    db.collection('plants').doc(id).get().then(res => {
-      wx.hideLoading();
-      const data = res.data;
-      this.setData({
-        nickname: data.nickname,
-        species: data.species,
-        location: data.location || '', // ✨ 新增：回显摆放位置
-        adoptDate: data.adoptDate,
-        waterInterval: data.waterInterval || 7, // ✨ 回显：浇水周期
-        remindEnabled: data.remindEnabled !== undefined ? data.remindEnabled : true, // ✨ 回显：提醒开关
-        tempImagePath: data.photoFileID, // 把云端的图片路径赋值给预览图
-        originalFileID: data.photoFileID
+    const app = getApp();
+    // 等 openid 就绪后再拉取，确保 owner 校验准确
+    app.silentLogin().then(openid => {
+      db.collection('plants').doc(id).get().then(res => {
+        wx.hideLoading();
+        const data = res.data;
+        if (data._openid && data._openid !== openid) {
+          wx.showToast({ title: '无权编辑此植物', icon: 'none' });
+          setTimeout(() => wx.navigateBack(), 1500);
+          return;
+        }
+        this.setData({
+          nickname: data.nickname,
+          species: data.species,
+          location: data.location || '',
+          adoptDate: data.adoptDate,
+          waterInterval: data.waterInterval || 7,
+          tempImagePath: data.photoFileID,
+          originalFileID: data.photoFileID
+        });
+      }).catch(err => {
+        wx.hideLoading();
+        console.error('【植光】加载植物资料失败:', err);
+        wx.showToast({ title: '加载失败，请返回重试', icon: 'none' });
       });
     });
   },
@@ -75,24 +86,25 @@ Page({
     }
   },
 
-  // ✨ 新增：切换提醒开关
-  onRemindChange(e) {
-    this.setData({ remindEnabled: e.detail.value });
-  },
-
   chooseImage() {
     wx.chooseMedia({
       count: 1, mediaType: ['image'], sourceType: ['album', 'camera'],
     }).then(res => {
       this.setData({ tempImagePath: res.tempFiles[0].tempFilePath });
+    }).catch(err => {
+      console.error('【植光】选择照片失败:', err);
     });
   },
 
   // 2. 提交更新的核心逻辑
   async submitPlant() {
-    const { nickname, species, location, adoptDate, waterInterval, remindEnabled, tempImagePath, originalFileID, plantId } = this.data;
+    if (this._submitting) return;
+    this._submitting = true;
+
+    const { nickname, species, location, adoptDate, waterInterval, tempImagePath, originalFileID, plantId } = this.data;
 
     if (!nickname || !species || !location || !adoptDate || !tempImagePath) {
+      this._submitting = false;
       wx.showToast({ title: '请填写完整信息', icon: 'none' });
       return;
     }
@@ -116,12 +128,11 @@ Page({
       // 用 update() 更新数据库中的这条记录
       await db.collection('plants').doc(plantId).update({
         data: {
-          nickname: nickname,
-          species: species,
-          location: location, // ✨ 新增：更新摆放位置
-          adoptDate: adoptDate,
-          waterInterval: waterInterval, // ✨ 新增：更新浇水周期
-          remindEnabled: remindEnabled, // ✨ 新增：更新提醒开关
+          nickname,
+          species,
+          location,
+          adoptDate,
+          waterInterval,
           photoFileID: finalFileID,
           updateTime: db.serverDate()
         }
@@ -134,6 +145,7 @@ Page({
       setTimeout(() => { wx.navigateBack({ delta: 1 }); }, 1500);
 
     } catch (err) {
+      this._submitting = false;
       wx.hideLoading();
       wx.showToast({ title: '更新失败', icon: 'error' });
       console.error(err);

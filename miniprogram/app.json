@@ -5,14 +5,13 @@
     "pages/add-plant/add-plant", 
     "pages/edit-plant/edit-plant",
     "pages/add-journal/add-journal",
-    "pages/profile-edit/profile-edit",
-    "pages/example/index"
+    "pages/profile-edit/profile-edit"
   ],
   "window": {
     "backgroundColor": "#F6F6F6",
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#F6F6F6",
-    "navigationBarTitleText": "云开发 QuickStart",
+    "navigationBarTitleText": "植光",
     "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",
