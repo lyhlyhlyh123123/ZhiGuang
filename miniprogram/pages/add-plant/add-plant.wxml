@@ -54,7 +54,9 @@
       
       <view class="setting-item no-border">
         <view class="setting-info">
-          <view class="setting-icon bg-blue icon icon-water"></view>
+          <view class="setting-icon-wrap bg-blue">
+            <text class="icon icon-water" style="font-size: 40rpx; color: #3B82F6;"></text>
+          </view>
           <view class="setting-text">
             <text class="setting-name">浇水周期</text>
             <text class="setting-desc">每隔 {{waterInterval}} 天浇一次水</text>

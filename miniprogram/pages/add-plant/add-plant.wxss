@@ -201,6 +201,15 @@ page {
   align-items: center;
   font-size: 40rpx;
 }
+.setting-icon-wrap {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 24rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
 .bg-blue { background-color: #EFF6FF; color: #3B82F6; }
 .bg-orange { background-color: #FFF7ED; color: #F97316; }
 

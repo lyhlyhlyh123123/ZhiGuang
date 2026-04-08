@@ -145,8 +145,7 @@ Page({
 
       wx.hideLoading();
       wx.showToast({ title: '修改成功！', icon: 'success' });
-      
-      // 更新成功后退回详情页，注意详情页的 onShow 会自动刷新数据展示最新状态
+      this._submitting = false;
       setTimeout(() => { wx.navigateBack({ delta: 1 }); }, 1500);
 
     } catch (err) {

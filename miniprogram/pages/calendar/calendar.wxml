@@ -35,6 +35,7 @@
       </view>
       <view class="journal-actions" wx:if="{{item.selectedActions && item.selectedActions.length > 0}}">
         <view class="action-tag" wx:for="{{item.selectedActions}}" wx:for-item="a" wx:key="label">
+          <text class="icon {{a.icon}} action-tag-icon"></text>
           <text class="action-tag-label">{{a.label}}</text>
         </view>
       </view>

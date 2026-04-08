@@ -22,8 +22,6 @@ Page({
   },
 
   onShow() {
-    // 每次显示都清除节流，确保数据最新
-    this._lastFetchTime = 0;
     this.fetchPlants();
     const cachedUserInfo = wx.getStorageSync('userInfo');
     if (cachedUserInfo && cachedUserInfo.nickName) {
@@ -34,7 +32,6 @@ Page({
       this.getTabBar().setData({ selected: 0 });
     }
   },
-
   // 设置当前日期
   setCurrentDate() {
     const now = new Date();
@@ -83,11 +80,12 @@ Page({
 
   // 去云端拉取植物列表的方法
   fetchPlants() {
-    // 节流：1分钟内不重复请求
+    // 节流：1分钟内不重复请求，但从子页面返回时强制刷新
     const now = Date.now();
-    if (this._lastFetchTime && now - this._lastFetchTime < 60000) {
+    if (!this._needRefresh && this._lastFetchTime && now - this._lastFetchTime < 60000) {
       return;
     }
+    this._needRefresh = false;
     this._lastFetchTime = now;
     wx.showNavigationBarLoading();
 
@@ -227,18 +225,14 @@ Page({
     this.setData({ page }, () => this.applyFilter(this.data.searchKey));
   },
 
-  // 点击悬浮按钮，跳转到添加植物页面
   goToAddPlant() {
-    wx.navigateTo({
-      url: '/pages/add-plant/add-plant',
-    });
+    this._needRefresh = true; // 返回时强制刷新
+    wx.navigateTo({ url: '/pages/add-plant/add-plant' });
   },
 
-  // 点击植物卡片，跳转到详情页
   goToDetail(e) {
+    this._needRefresh = true; // 返回时强制刷新
     const plantId = e.currentTarget.dataset.id;
-    wx.navigateTo({
-      url: `/pages/plant-detail/plant-detail?id=${plantId}`,
-    });
+    wx.navigateTo({ url: `/pages/plant-detail/plant-detail?id=${plantId}` });
   }
 });

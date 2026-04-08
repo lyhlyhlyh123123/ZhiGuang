@@ -136,6 +136,7 @@ Page({
 
       wx.hideLoading();
       wx.showToast({ title: '记录成功' });
+      this._submitting = false;
       setTimeout(() => wx.navigateBack(), 1500);
 
     } catch (err) {

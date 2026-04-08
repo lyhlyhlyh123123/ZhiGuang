@@ -28,8 +28,16 @@ page { background: #F0FDF4; font-family: -apple-system, sans-serif; }
 .journal-meta { font-size: 22rpx; color: #9CA3AF; }
 .journal-time { font-size: 22rpx; color: #9CA3AF; flex-shrink: 0; margin-left: 16rpx; }
 .journal-actions { display: flex; flex-wrap: wrap; gap: 10rpx; margin-bottom: 12rpx; }
-.action-tag { background: #F0FDF4; border-radius: 12rpx; padding: 6rpx 18rpx; border: 1rpx solid #DCFCE7; }
+.action-tag { display: flex; align-items: center; gap: 6rpx; background: #F0FDF4; border-radius: 12rpx; padding: 6rpx 16rpx; border: 1rpx solid #DCFCE7; }
+.action-tag-icon { font-size: 26rpx; }
 .action-tag-label { font-size: 24rpx; color: #166534; font-weight: 500; }
 .journal-note { font-size: 26rpx; color: #374151; display: block; margin-bottom: 12rpx; }
 .journal-photos { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 12rpx; }
 .journal-photo { width: 140rpx; height: 140rpx; border-radius: 12rpx; }
+
+.icon-Water { color: #3B82F6; }
+.icon-sun { color: #F97316; }
+.icon-feiliao { color: #F59E0B; }
+.icon-Scissors { color: #10B981; }
+.icon-penzai { color: #22C55E; }
+.icon-qingkong { color: #EF4444; }

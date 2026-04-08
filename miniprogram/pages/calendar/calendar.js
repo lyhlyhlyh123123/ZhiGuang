@@ -19,8 +19,12 @@ Page({
   },
 
   onShow() {
-    // 每次切换回来都刷新，确保新增记录能显示
-    this.loadMonthData();
+    // 节流：10秒内不重复加载，但切换月份后会重置
+    const now = Date.now();
+    if (!this._lastLoadTime || now - this._lastLoadTime > 10000) {
+      this._lastLoadTime = now;
+      this.loadMonthData();
+    }
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
     }
@@ -74,12 +78,14 @@ Page({
   prevMonth() {
     let { year, month } = this.data;
     month--; if (month < 1) { month = 12; year--; }
+    this._lastLoadTime = 0;
     this.setData({ year, month, selectedDate: '', dayJournals: [] }, () => this.loadMonthData());
   },
 
   nextMonth() {
     let { year, month } = this.data;
     month++; if (month > 12) { month = 1; year++; }
+    this._lastLoadTime = 0;
     this.setData({ year, month, selectedDate: '', dayJournals: [] }, () => this.loadMonthData());
   },
 

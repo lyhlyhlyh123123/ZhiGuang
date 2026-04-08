@@ -88,7 +88,7 @@ Page({
           data: {
             plantId, plantName: plant ? plant.nickname : '',
             selectedActions: selectedActionList,
-            note: note || '批量养护', photoList: [],
+            note: note || '', photoList: [],
             createTime: db.serverDate(), updateTime: db.serverDate()
           }
         });
@@ -101,8 +101,8 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: `已记录 ${selectedIds.length} 株`, icon: 'success' });
       // 重置选中状态和备注，actions 恢复默认只选浇水
-      const actions = this.data.actions.map((a, i) => ({ ...a, selected: i === 0 }));
-      this.setData({ selectedIds: [], note: '', submitting: false, actions });
+      const resetActions = this.data.actions.map((a, i) => ({ ...a, selected: i === 0 }));
+      this.setData({ selectedIds: [], note: '', submitting: false, actions: resetActions });
       this._submitting = false;
     } catch(err) {
       wx.hideLoading();

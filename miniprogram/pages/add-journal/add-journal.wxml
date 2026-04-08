@@ -49,7 +49,10 @@
     </view>
     
     <view class="add-img-btn" bindtap="chooseImage" wx:if="{{tempImagePaths.length < 9}}">
-      <text class="plus icon icon-plus"></text>
+      <view class="add-img-btn-inner">
+        <text class="plus icon icon-plus"></text>
+        <text class="add-img-count">{{tempImagePaths.length}}/9</text>
+      </view>
     </view>
   </view>
 

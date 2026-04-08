@@ -26,6 +26,6 @@
 
   <view class="action-footer">
     <button class="save-btn {{canSubmit ? '' : 'btn-disabled'}}" bindtap="saveUserProfile" disabled="{{!canSubmit}}">完成资料同步</button>
-    <button class="logout-btn" wx:if="{{userInfo.nickName !== '见习'}}" bindtap="logout">退出登录</button>
+    <button class="logout-btn" wx:if="{{userInfo && userInfo.avatarUrl}}" bindtap="logout">退出登录</button>
   </view>
 </view>

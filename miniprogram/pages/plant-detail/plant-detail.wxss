@@ -22,19 +22,6 @@ page {
   height: 100%;
 }
 
-.health-badge {
-  position: absolute;
-  bottom: 80rpx; /* 留出被覆盖的负边距 */
-  left: 48rpx;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(8px);
-  padding: 16rpx 32rpx;
-  border-radius: 32rpx;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 10rpx 30rpx rgba(0,0,0,0.1);
-}
-
 /* 2. 主体内容卡片 (负边距上浮) */
 .content-card {
   flex: 1;
@@ -71,47 +58,6 @@ page {
   transform: scale(0.95);
 }
 
-/* 3. 植物看板 (3x2 网格) */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20rpx;
-  margin-bottom: 64rpx;
-}
-
-.stat-card {
-  background: #FFFFFF;
-  border-radius: 24rpx;
-  padding: 28rpx 20rpx;
-  display: flex;
-  align-items: center;
-  border: 1rpx solid #EEF2F7;
-  box-shadow: 0 8rpx 18rpx rgba(16, 24, 40, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  min-height: 120rpx;
-}
-.stat-card:hover {
-  transform: translateY(-2rpx);
-  box-shadow: 0 12rpx 22rpx rgba(16, 24, 40, 0.08);
-}
-
-.stat-icon-box {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 18rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-}
-.stat-icon-box .iconfont {
-  font-size: 36rpx;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
 /* 植物信息展示区 - 新布局 */
 .plant-info-section {
   padding: 48rpx 0 32rpx 0;
@@ -278,14 +224,6 @@ page {
 
 .care-value.warn {
   color: #F59E0B;
-}
-
-/* SENSOR GRID 兼容 (legacy) - 可删除 */
-.sensor-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20rpx;
-  margin-top: 30rpx;
 }
 
 /* 4. 时间轴 */

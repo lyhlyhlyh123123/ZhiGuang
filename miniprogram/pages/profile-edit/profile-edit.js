@@ -51,36 +51,28 @@ Page({
   },
 
   async saveUserProfile() {
+    if (this._saving) return;
+    this._saving = true;
     const { tempAvatarUrl, tempNickname } = this.data;
     wx.showLoading({ title: '资料同步中...' });
 
     try {
       let finalAvatarUrl = tempAvatarUrl;
-      // 检查是否需要上传新头像到云端
       if (tempAvatarUrl.startsWith('http://tmp') || tempAvatarUrl.startsWith('wxfile://')) {
         const cloudPath = `avatars/${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
-        const uploadRes = await wx.cloud.uploadFile({
-          cloudPath,
-          filePath: tempAvatarUrl
-        });
+        const uploadRes = await wx.cloud.uploadFile({ cloudPath, filePath: tempAvatarUrl });
         finalAvatarUrl = uploadRes.fileID;
       }
 
-      const newUserInfo = {
-        avatarUrl: finalAvatarUrl,
-        nickName: tempNickname
-      };
-
+      const newUserInfo = { avatarUrl: finalAvatarUrl, nickName: tempNickname };
       app.globalData.userInfo = newUserInfo;
       wx.setStorageSync('userInfo', newUserInfo);
 
       wx.hideLoading();
       wx.showToast({ title: '资料同步成功', icon: 'success' });
-      
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1500);
+      setTimeout(() => { this._saving = false; wx.navigateBack(); }, 1500);
     } catch (err) {
+      this._saving = false;
       wx.hideLoading();
       console.error('保存失败', err);
       wx.showToast({ title: '同步失败，请重试', icon: 'none' });

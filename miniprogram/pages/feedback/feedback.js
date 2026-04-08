@@ -12,6 +12,13 @@ Page({
     }
   },
 
+  onShareAppMessage() {
+    return {
+      title: '植光 ZhiGuang - 记录每一寸破土而出的生命',
+      path: '/pages/index/index'
+    };
+  },
+
   onContentInput(e) { this.setData({ content: e.detail.value }); },
   onContactInput(e) { this.setData({ contact: e.detail.value }); },
 
