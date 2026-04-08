@@ -263,5 +263,5 @@ page {
   gap: 8rpx;
 }
 
-.add-img-btn .plus { font-size: 56rpx; color: #86EFAC; font-weight: 300; }
-.add-img-count { font-size: 20rpx; color: #86EFAC; }
+.add-img-btn .plus { font-size: 56rpx; color: #A7D9B0; font-weight: 300; }
+.add-img-count { font-size: 20rpx; color: #A7D9B0; }

@@ -6,7 +6,7 @@ Page({
     plantList: [],
     selectedIds: [],
     actions: [
-      { label: '浇水', value: 'water', icon: 'icon-Water', selected: true },
+      { label: '浇水', value: 'water', icon: 'icon-Water', selected: false },
       { label: '晒太阳', value: 'sun', icon: 'icon-sun', selected: false },
       { label: '施肥', value: 'fertilize', icon: 'icon-feiliao', selected: false },
       { label: '修剪', value: 'prune', icon: 'icon-Scissors', selected: false },
@@ -101,8 +101,9 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: `已记录 ${selectedIds.length} 株`, icon: 'success' });
       // 重置选中状态和备注，actions 恢复默认只选浇水
-      const resetActions = this.data.actions.map((a, i) => ({ ...a, selected: i === 0 }));
-      this.setData({ selectedIds: [], note: '', submitting: false, actions: resetActions });
+      const resetActions = this.data.actions.map(a => ({ ...a, selected: false }));
+      const resetPlantList = this.data.plantList.map(p => ({ ...p, _selected: false }));
+      this.setData({ selectedIds: [], note: '', submitting: false, actions: resetActions, plantList: resetPlantList });
       this._submitting = false;
     } catch(err) {
       wx.hideLoading();

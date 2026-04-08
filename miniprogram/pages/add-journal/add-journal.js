@@ -76,20 +76,21 @@ Page({
     if (this._submitting) return;
     this._submitting = true;
 
+    const { note, tempImagePaths, plantId } = this.data;
     const selectedActions = this.data.actions.filter(a => a.selected);
-    if (selectedActions.length === 0) {
+
+    // 动作、图片、文字三选一即可
+    const hasAction = selectedActions.length > 0;
+    const hasImage = tempImagePaths.length > 0;
+    const hasNote = note.trim().length > 0;
+
+    if (!hasAction && !hasImage && !hasNote) {
       this._submitting = false;
-      wx.showToast({ title: '请至少选一个动作', icon: 'none' });
+      wx.showToast({ title: '请至少填写一项内容', icon: 'none' });
       return;
     }
 
-    if (!this.data.note.trim()) {
-      this._submitting = false;
-      wx.showToast({ title: '请填写记录内容', icon: 'none' });
-      return;
-    }
-
-    if (!this.data.plantId) {
+    if (!plantId) {
       this._submitting = false;
       wx.showToast({ title: '请选择要记录的植物', icon: 'none' });
       return;
