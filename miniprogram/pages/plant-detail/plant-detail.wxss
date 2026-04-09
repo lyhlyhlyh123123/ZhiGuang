@@ -13,11 +13,13 @@ page {
 /* 1. 顶部大图区 */
 .hero-section {
   width: 100%;
-  height: 640rpx;
+  padding-top: 75%; /* 4:3 比例 */
   position: relative;
 }
 
 .hero-bg {
+  position: absolute;
+  top: 0; left: 0;
   width: 100%;
   height: 100%;
 }
@@ -26,11 +28,11 @@ page {
 .content-card {
   flex: 1;
   background-color: #FFFFFF;
-  margin-top: -40rpx; /* ✨ 核心：向上覆盖大图 */
-  border-radius: 64rpx 64rpx 0 0;
+  margin-top: 0;
+  border-radius: 0;
   position: relative;
   z-index: 10;
-  padding: 64rpx 48rpx;
+  padding: 32rpx 48rpx 64rpx;
 }
 
 /* 2. 头部操作区 */
@@ -60,7 +62,7 @@ page {
 
 /* 植物信息展示区 - 新布局 */
 .plant-info-section {
-  padding: 48rpx 0 32rpx 0;
+  padding: 24rpx 0 32rpx 0;
 }
 
 .plant-name-row {
@@ -432,7 +434,7 @@ page {
 
 .skeleton-hero {
   width: 100%;
-  height: 640rpx;
+  padding-top: 75%; /* 与 hero-section 保持一致 */
   background: linear-gradient(90deg, #e8f5e9 25%, #d0ead2 50%, #e8f5e9 75%);
   background-size: 750rpx 100%;
   animation: shimmer 1.4s infinite;
@@ -440,8 +442,8 @@ page {
 
 .skeleton-card {
   background: #FFFFFF;
-  margin-top: -40rpx;
-  border-radius: 64rpx 64rpx 0 0;
+  margin-top: 0;
+  border-radius: 0;
   padding: 64rpx 48rpx;
   min-height: 60vh;
 }

@@ -10,18 +10,31 @@
     </view>
   </view>
 
+  <!-- 搜索框 -->
+  <view class="batch-search-box">
+    <text class="icon icon-search" style="font-size: 28rpx; color: #9CA3AF; flex-shrink: 0;"></text>
+    <input
+      class="batch-search-input"
+      placeholder="搜索名字、品种或位置，用 / 联合查询"
+      value="{{batchSearchKey}}"
+      bindinput="onBatchSearch"
+    />
+    <text class="batch-search-clear" wx:if="{{batchSearchKey}}" bindtap="clearBatchSearch">✕</text>
+  </view>
+
   <!-- 植物横向滚动选择 -->
   <scroll-view scroll-x class="plant-scroll" enhanced show-scrollbar="{{false}}">
     <view class="plant-scroll-inner">
       <view
         class="plant-scroll-card {{item._selected ? 'selected' : ''}}"
-        wx:for="{{plantList}}" wx:key="_id"
+        wx:for="{{displayList}}" wx:key="_id"
         bindtap="togglePlant" data-id="{{item._id}}"
       >
         <view class="scroll-img-wrap">
           <image class="scroll-img" src="{{item.photoFileID}}" mode="aspectFill"></image>
         </view>
         <text class="scroll-name">{{item.nickname}}</text>
+        <text class="scroll-sub" wx:if="{{item.species || item.location}}">{{item.species}}{{item.species && item.location ? ' · ' : ''}}{{item.location}}</text>
       </view>
     </view>
   </scroll-view>

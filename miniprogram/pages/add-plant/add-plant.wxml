@@ -7,14 +7,35 @@
 
   <scroll-view scroll-y class="scroll-content">
     
-    <view class="photo-upload-box {{tempImagePath ? 'has-img' : ''}}" bindtap="chooseImage">
-      <image wx:if="{{tempImagePath}}" src="{{tempImagePath}}" mode="aspectFill" class="uploaded-img"></image>
-      <view wx:else class="upload-placeholder">
+    <!-- 图片上传/拖动预览框 -->
+    <view class="photo-upload-box {{tempImagePath ? 'has-img' : ''}}" style="{{boxH ? 'height:' + boxH + 'px;' : ''}}">
+      <view wx:if="{{!tempImagePath}}" class="upload-placeholder" bindtap="chooseImage">
         <text class="icon icon-image"></text>
         <text class="upload-title">点击上传植物照片</text>
         <text class="upload-subtitle">选一张它最好看的瞬间</text>
       </view>
+      <block wx:else>
+        <movable-area style="width:100%;height:{{boxH}}px;overflow:hidden;">
+          <movable-view
+            direction="all"
+            x="{{imgX}}" y="{{imgY}}"
+            bindchange="onImgMove"
+            scale
+            bindscale="onImgScale"
+            style="width:{{imgW}}px;height:{{imgH}}px;"
+          >
+            <image src="{{tempImagePath}}" mode="scaleToFill" style="width:{{imgW}}px;height:{{imgH}}px;display:block;"></image>
+          </movable-view>
+        </movable-area>
+        <view class="crop-hint-bar">
+          <text class="crop-hint-text">拖动/双指缩放调整显示区域</text>
+          <view class="crop-reselect" catchtap="chooseImage">重新选择</view>
+        </view>
+      </block>
     </view>
+
+    <!-- 隐藏 canvas 用于截图 -->
+    <canvas canvas-id="cropCanvas" class="hidden-canvas" style="width:{{boxW}}px;height:{{boxH}}px;position:fixed;top:-9999px;left:-9999px;"></canvas>
 
     <view class="section-title">基础信息</view>
     <view class="info-group">
@@ -40,10 +61,10 @@
       </view>
       
       <view class="input-wrapper">
-        <text class="input-label">到家日期</text>
+        <text class="input-label">到家日期 <text style="color:#9CA3AF;font-weight:400;">（选填）</text></text>
         <picker mode="date" value="{{adoptDate}}" bindchange="onDateChange">
           <view class="picker-text {{adoptDate ? '' : 'placeholder-color'}}">
-            {{adoptDate || '请选择它来到你身边的日期'}}
+            {{adoptDate || '选填，记录它来到你身边的日期'}}
           </view>
         </picker>
       </view>

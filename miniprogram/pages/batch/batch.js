@@ -14,7 +14,13 @@ Page({
       { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false }
     ],
     note: '',
-    submitting: false
+    submitting: false,
+    speciesList: [],
+    locationList: [],
+    filterSpecies: '',
+    filterLocation: '',
+    batchSearchKey: '',
+    displayList: []
   },
 
   onShow() {
@@ -31,13 +37,58 @@ Page({
 
   loadPlants() {
     const app = getApp();
-    app.silentLogin().then(openid => {
-      db.collection('plants')
-        .where({ _openid: openid })
-        .orderBy('createTime', 'desc')
-        .limit(100).get()
-        .then(res => this.setData({ plantList: res.data || [], selectedIds: [] }));
+    app.silentLogin().then(() => {
+      wx.cloud.callFunction({ name: 'getMyPlants' })
+        .then(res => {
+          const plants = (res.result && res.result.plants) || [];
+          // 提取品种和地点标签（去重）
+          const speciesSet = new Set(plants.map(p => p.species).filter(Boolean));
+          const locationSet = new Set(plants.map(p => p.location).filter(Boolean));
+          this.setData({
+            plantList: plants, displayList: plants, selectedIds: [],
+            speciesList: [...speciesSet],
+            locationList: [...locationSet],
+            filterSpecies: '', filterLocation: '', batchSearchKey: ''
+          });
+        })
+        .catch(() => {
+          wx.showToast({ title: '加载失败', icon: 'none' });
+        });
     });
+  },
+
+  onBatchSearch(e) {
+    const key = e.detail.value.trim();
+    this.setData({ batchSearchKey: key });
+    this._applySearch(key);
+  },
+
+  clearBatchSearch() {
+    const plantList = this.data.plantList.map(p => ({ ...p, _selected: false }));
+    this.setData({ batchSearchKey: '', selectedIds: [], plantList, displayList: plantList });
+  },
+
+  // 支持 / 分隔的联合查询：多肉/客厅 → 品种含"多肉" AND 位置含"客厅"
+  _applySearch(key) {
+    const { plantList } = this.data;
+    if (!key) {
+      const resetList = plantList.map(p => ({ ...p, _selected: false }));
+      this.setData({ selectedIds: [], plantList: resetList, displayList: resetList });
+      return;
+    }
+    const parts = key.split('/').map(s => s.trim()).filter(Boolean);
+    const matched = plantList.filter(p => {
+      return parts.every(part => {
+        const lp = part.toLowerCase();
+        return (p.species || '').toLowerCase().includes(lp) ||
+               (p.location || '').toLowerCase().includes(lp) ||
+               (p.nickname || '').toLowerCase().includes(lp);
+      });
+    });
+    const matchIds = matched.map(p => p._id);
+    const newPlantList = plantList.map(p => ({ ...p, _selected: matchIds.includes(p._id) }));
+    const displayList = matched.map(p => ({ ...p, _selected: true }));
+    this.setData({ selectedIds: matchIds, plantList: newPlantList, displayList });
   },
 
   togglePlant(e) {
@@ -103,7 +154,7 @@ Page({
       // 重置选中状态和备注，actions 恢复默认只选浇水
       const resetActions = this.data.actions.map(a => ({ ...a, selected: false }));
       const resetPlantList = this.data.plantList.map(p => ({ ...p, _selected: false }));
-      this.setData({ selectedIds: [], note: '', submitting: false, actions: resetActions, plantList: resetPlantList });
+      this.setData({ selectedIds: [], note: '', submitting: false, actions: resetActions, plantList: resetPlantList, displayList: resetPlantList, activeTag: '', filterSpecies: '', filterLocation: '', batchSearchKey: '' });
       this._submitting = false;
     } catch(err) {
       wx.hideLoading();

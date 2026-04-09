@@ -25,6 +25,31 @@ page { background: #F0FDF4; font-family: -apple-system, sans-serif; }
   border: 2rpx solid #BBF7D0;
 }
 
+/* 搜索框 */
+.batch-search-box {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: #FFFFFF;
+  border: 2rpx solid #E5E7EB;
+  border-radius: 24rpx;
+  padding: 0 24rpx;
+  height: 80rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+.batch-search-input {
+  flex: 1;
+  font-size: 26rpx;
+  color: #374151;
+  height: 100%;
+}
+.batch-search-clear {
+  font-size: 28rpx;
+  color: #9CA3AF;
+  padding: 8rpx;
+}
+
 /* 横向滚动植物选择 */
 .plant-scroll {
   width: 100%;
@@ -70,6 +95,12 @@ page { background: #F0FDF4; font-family: -apple-system, sans-serif; }
   font-size: 24rpx; font-weight: 700; color: #1E3B28;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   width: 100%; text-align: center;
+}
+.scroll-sub {
+  font-size: 20rpx; color: #9CA3AF;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 100%; text-align: center;
+  margin-top: 2rpx;
 }
 
 /* 操作网格 */

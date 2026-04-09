@@ -90,13 +90,11 @@ Page({
     wx.showNavigationBarLoading();
 
     const app = getApp();
-    app.silentLogin().then(openid => {
-      // 并行拉取植物列表和今日日记
-      const plantsPromise = db.collection('plants')
-        .where({ _openid: openid })
-        .orderBy('createTime', 'desc')
-        .limit(PLANT_QUERY_LIMIT)
-        .get();
+    app.silentLogin().then(() => {
+      // 并行拉取植物列表（通过云函数，无20条限制）和今日日记
+      const plantsPromise = wx.cloud.callFunction({
+        name: 'getMyPlants'
+      });
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -108,7 +106,7 @@ Page({
       Promise.all([plantsPromise, journalsPromise])
         .then(([plantsRes, journalsRes]) => {
           wx.hideNavigationBarLoading();
-          const rawPlants = plantsRes.data || [];
+          const rawPlants = (plantsRes.result && plantsRes.result.plants) || [];
           const todayJournals = journalsRes.data || [];
 
           const allPlants = rawPlants.map(p => ({

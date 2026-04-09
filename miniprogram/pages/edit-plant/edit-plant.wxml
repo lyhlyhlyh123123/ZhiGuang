@@ -9,14 +9,35 @@
 
   <scroll-view scroll-y class="scroll-content">
 
-    <view class="photo-upload-box {{tempImagePath ? 'has-img' : ''}}" bindtap="chooseImage">
-      <image wx:if="{{tempImagePath}}" src="{{tempImagePath}}" mode="aspectFill" class="uploaded-img"></image>
-      <view wx:else class="upload-placeholder">
+    <!-- 图片上传/拖动预览框 -->
+    <view class="photo-upload-box {{tempImagePath ? 'has-img' : ''}}" style="{{boxH ? 'height:' + boxH + 'px;' : ''}}">
+      <view wx:if="{{!tempImagePath}}" class="upload-placeholder" bindtap="chooseImage">
         <text class="icon icon-image"></text>
         <text class="upload-title">点击上传植物照片</text>
         <text class="upload-subtitle">选一张它最好看的瞬间</text>
       </view>
+      <block wx:else>
+        <movable-area style="width:100%;height:{{boxH}}px;overflow:hidden;">
+          <movable-view
+            direction="all"
+            x="{{imgX}}" y="{{imgY}}"
+            bindchange="onImgMove"
+            scale
+            bindscale="onImgScale"
+            style="width:{{imgW}}px;height:{{imgH}}px;"
+          >
+            <image src="{{tempImagePath}}" mode="scaleToFill" style="width:{{imgW}}px;height:{{imgH}}px;display:block;"></image>
+          </movable-view>
+        </movable-area>
+        <view class="crop-hint-bar">
+          <text class="crop-hint-text">重新上传图片再进行拖动/双指缩放调整显示</text>
+          <view class="crop-reselect" catchtap="chooseImage">重新选择</view>
+        </view>
+      </block>
     </view>
+
+    <!-- 隐藏 canvas 用于截图 -->
+    <canvas canvas-id="cropCanvas" class="hidden-canvas" style="width:{{boxW}}px;height:{{boxH}}px;position:fixed;top:-9999px;left:-9999px;"></canvas>
 
     <view class="section-title">基础信息</view>
     <view class="info-group">

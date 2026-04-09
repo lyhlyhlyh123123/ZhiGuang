@@ -403,13 +403,15 @@ page {
 
 .card-img-box {
   width: 100%;
-  height: 220rpx;
+  padding-top: 75%; /* 4:3 比例 */
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, #DCFCE7, #BBF7D0);
 }
 
 .card-img {
+  position: absolute;
+  top: 0; left: 0;
   width: 100%;
   height: 100%;
 }
