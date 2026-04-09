@@ -93,10 +93,12 @@ Page({
 
   togglePlant(e) {
     const { id } = e.currentTarget.dataset;
-    let { selectedIds, plantList } = this.data;
+    let { selectedIds, plantList, displayList } = this.data;
     selectedIds = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
     plantList = plantList.map(p => ({ ...p, _selected: selectedIds.includes(p._id) }));
-    this.setData({ selectedIds, plantList });
+    // 同步更新 displayList，确保界面显示正确
+    displayList = displayList.map(p => ({ ...p, _selected: selectedIds.includes(p._id) }));
+    this.setData({ selectedIds, plantList, displayList });
   },
 
   selectAll() {
