@@ -117,16 +117,19 @@ Page({
           const caredPlantIds = [...new Set(todayJournals.map(j => String(j.plantId)))];
           const todoPlants = allPlants.filter(p => !caredPlantIds.includes(String(p._id)));
 
+          // 如果没有保留的状态，重置为默认值
+          const shouldResetState = !this._preserveState;
           this.setData({
             allPlants,
             todoCount: todoPlants.length,
             todoPlants,
             todoAvatars: todoPlants.slice(0, 3), // 只取前3个用于头像展示
-            searchKey: '',
-            page: 1,
-            isTodoFilter: false
+            searchKey: shouldResetState ? '' : this.data.searchKey,
+            page: shouldResetState ? 1 : this.data.page,
+            isTodoFilter: shouldResetState ? false : this.data.isTodoFilter
           });
-          this.applyFilter('');
+          this._preserveState = false; // 使用后重置标志
+          this.applyFilter(this.data.searchKey || (this.data.isTodoFilter ? 'TODO_CHECKIN' : ''));
         })
         .catch(err => {
           wx.hideNavigationBarLoading();
@@ -159,7 +162,7 @@ Page({
     }, 300);
   },
 
-  // 过滤 + 分页
+  // 过滤 + 分页（支持联合查询）
   applyFilter(searchKey) {
     let filteredPlant = [];
     
@@ -167,14 +170,22 @@ Page({
       // 打卡模式：显示今日未照顾列表
       filteredPlant = this.data.todoPlants;
     } else {
-      // 普通搜索模式
-      const lowerKey = (searchKey || '').toLowerCase();
-      filteredPlant = (this.data.allPlants || []).filter(item => {
-        if (!lowerKey) return true;
-        const name = (item.nickname || '').toLowerCase();
-        const species = (item.species || '').toLowerCase();
-        return name.includes(lowerKey) || species.includes(lowerKey);
-      });
+      // 普通搜索模式（支持 / 联合查询）
+      const key = searchKey || '';
+      if (!key) {
+        filteredPlant = this.data.allPlants || [];
+      } else {
+        // 支持 / 分隔符联合查询，例如：多肉/客厅
+        const parts = key.split('/').map(s => s.trim().toLowerCase()).filter(Boolean);
+        filteredPlant = (this.data.allPlants || []).filter(item => {
+          return parts.every(part => {
+            const name = (item.nickname || '').toLowerCase();
+            const species = (item.species || '').toLowerCase();
+            const location = (item.location || '').toLowerCase();
+            return name.includes(part) || species.includes(part) || location.includes(part);
+          });
+        });
+      }
     }
 
     const totalPages = Math.max(1, Math.ceil(filteredPlant.length / this.data.pageSize));
@@ -230,6 +241,7 @@ Page({
 
   goToDetail(e) {
     this._needRefresh = true; // 返回时强制刷新
+    this._preserveState = true; // 保留当前页面状态
     const plantId = e.currentTarget.dataset.id;
     wx.navigateTo({ url: `/pages/plant-detail/plant-detail?id=${plantId}` });
   }

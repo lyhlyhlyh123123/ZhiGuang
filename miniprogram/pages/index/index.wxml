@@ -62,7 +62,7 @@
   <view class="search-wrap">
     <view class="search-box {{isTodoFilter ? 'search-box-active' : ''}}">
       <text class="icon icon-search search-icon"></text>
-      <input class="search-input" placeholder="{{isTodoFilter ? '正在查看今日待办植物...' : '搜索植物名称或品种...'}}" type="text" bindinput="onSearchInput" value="{{searchKey}}" />
+      <input class="search-input" placeholder="{{isTodoFilter ? '正在查看今日待办植物...' : '搜索名称、品种或位置，用 / 联合查询'}}" type="text" bindinput="onSearchInput" value="{{searchKey}}" />
     </view>
   </view>
 
