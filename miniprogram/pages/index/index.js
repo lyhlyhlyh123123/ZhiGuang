@@ -53,7 +53,6 @@ Page({
   // ✨ 新增：图片加载失败处理 (解决 403 或其他加载问题)
   onImageError(e) {
     const { id } = e.currentTarget.dataset;
-    console.warn('【植光】图片加载失败，ID:', id);
     
     // 尝试通过 getTempFileURL 重新获取临时链接
     const plant = this.data.plantList.find(p => p._id === id);
