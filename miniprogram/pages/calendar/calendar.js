@@ -32,23 +32,41 @@ Page({
 
   async loadMonthData() {
     const { year, month } = this.data;
+    
+    // 性能优化：缓存月度数据，避免重复查询
+    const cacheKey = `${year}-${month}`;
+    if (this._monthCache && this._monthCache[cacheKey]) {
+      this.setData({ monthStats: this._monthCache[cacheKey] });
+      this.buildCalendar();
+      return;
+    }
+    
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 1);
     const _ = db.command;
+    
     try {
       const res = await db.collection('journals')
         .where({ createTime: _.gte(start).and(_.lt(end)) })
         .limit(200).get();
+      
       const monthStats = {};
       res.data
         .filter(j => j.plantName && j.plantName.trim())
         .forEach(j => {
-        const d = new Date(j.createTime);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        monthStats[key] = (monthStats[key] || 0) + 1;
-      });
+          const d = new Date(j.createTime);
+          const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          monthStats[key] = (monthStats[key] || 0) + 1;
+        });
+      
+      // 缓存月度统计数据
+      if (!this._monthCache) this._monthCache = {};
+      this._monthCache[cacheKey] = monthStats;
+      
       this.setData({ monthStats });
-    } catch(e) {}
+    } catch(e) {
+      console.error('【植光】日历数据加载失败:', e);
+    }
     this.buildCalendar();
 
     // 自动选中今天并加载当天数据
@@ -92,11 +110,22 @@ Page({
   async selectDay(e) {
     const { date } = e.currentTarget.dataset;
     if (!date) return;
+    
+    // 性能优化：缓存日期数据
+    if (this._dayCache && this._dayCache[date]) {
+      this.setData({
+        selectedDate: date,
+        dayJournals: this._dayCache[date]
+      });
+      return;
+    }
+    
     this.setData({ selectedDate: date });
     const parts = date.split('-');
     const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0);
     const nextDay = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + 1, 0, 0, 0);
     const _ = db.command;
+    
     try {
       const res = await db.collection('journals')
         .where({ createTime: _.gte(d).and(_.lt(nextDay)) })
@@ -123,8 +152,15 @@ Page({
         j.location = plant.location || '';
         return j;
       });
+      
+      // 缓存当天数据
+      if (!this._dayCache) this._dayCache = {};
+      this._dayCache[date] = dayJournals;
+      
       this.setData({ dayJournals });
-    } catch(e) { this.setData({ dayJournals: [] }); }
+    } catch(e) {
+      this.setData({ dayJournals: [] });
+    }
   },
 
   goToDetail(e) {

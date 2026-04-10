@@ -53,16 +53,45 @@ Page({
   // ✨ 新增：图片加载失败处理 (解决 403 或其他加载问题)
   onImageError(e) {
     const { id } = e.currentTarget.dataset;
-    console.warn('【植光】图片加载失败，可能是权限或链接过期，已自动应用兜底图。ID:', id);
+    console.warn('【植光】图片加载失败，ID:', id);
     
-    // 找到失败的那一项并替换为默认图
+    // 尝试通过 getTempFileURL 重新获取临时链接
+    const plant = this.data.plantList.find(p => p._id === id);
+    if (plant && plant.photoFileID && plant.photoFileID.startsWith('cloud://')) {
+      wx.cloud.getTempFileURL({
+        fileList: [plant.photoFileID]
+      }).then(res => {
+        if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+          // 重新获取成功，更新为临时链接
+          const plantList = this.data.plantList.map(item => {
+            if (item._id === id) {
+              return { ...item, photoFileID: res.fileList[0].tempFileURL };
+            }
+            return item;
+          });
+          this.setData({ plantList });
+        } else {
+          // 获取失败，使用兜底图
+          this.setFallbackImage(id);
+        }
+      }).catch(() => {
+        // 获取失败，使用兜底图
+        this.setFallbackImage(id);
+      });
+    } else {
+      // 非云存储图片，直接使用兜底图
+      this.setFallbackImage(id);
+    }
+  },
+
+  // 设置兜底图片
+  setFallbackImage(id) {
     const plantList = this.data.plantList.map(item => {
       if (item._id === id) {
-        return { ...item, photoFileID: '/images/avatar.png' }; // 使用本地头像图作为兜底
+        return { ...item, photoFileID: '/images/avatar.png' };
       }
       return item;
     });
-    
     this.setData({ plantList });
   },
 
@@ -162,8 +191,15 @@ Page({
     }, 300);
   },
 
-  // 过滤 + 分页（支持联合查询）
+  // 过滤 + 分页（支持联合查询，带缓存优化）
   applyFilter(searchKey) {
+    // 性能优化：如果搜索关键词和数据都没变，使用缓存结果
+    if (this._lastSearchKey === searchKey && this._cachedFilteredPlants &&
+        this._lastAllPlantsCount === (this.data.allPlants || []).length) {
+      this.renderPage(this._cachedFilteredPlants);
+      return;
+    }
+    
     let filteredPlant = [];
     
     if (searchKey === 'TODO_CHECKIN') {
@@ -187,6 +223,17 @@ Page({
         });
       }
     }
+    
+    // 缓存过滤结果
+    this._lastSearchKey = searchKey;
+    this._cachedFilteredPlants = filteredPlant;
+    this._lastAllPlantsCount = (this.data.allPlants || []).length;
+    
+    this.renderPage(filteredPlant);
+  },
+
+  // 渲染分页数据（从 applyFilter 中提取）
+  renderPage(filteredPlant) {
 
     const totalPages = Math.max(1, Math.ceil(filteredPlant.length / this.data.pageSize));
     const page = Math.min(this.data.page, totalPages);
@@ -198,7 +245,7 @@ Page({
       totalPages,
       page,
       plantList,
-      noResults: filteredPlant.length === 0 && (searchKey !== '' && searchKey !== 'TODO_CHECKIN'),
+      noResults: filteredPlant.length === 0 && (this._lastSearchKey !== '' && this._lastSearchKey !== 'TODO_CHECKIN'),
       noPlants: this.data.allPlants.length === 0
     });
   },
@@ -223,15 +270,29 @@ Page({
     };
   },
 
-  // 翻页按钮
+  // 翻页按钮（优化：直接渲染，无需重新过滤）
   onPrevPage() {
     const page = Math.max(1, this.data.page - 1);
-    this.setData({ page }, () => this.applyFilter(this.data.searchKey));
+    this.setData({ page }, () => {
+      // 使用缓存的过滤结果，只需重新分页
+      if (this._cachedFilteredPlants) {
+        this.renderPage(this._cachedFilteredPlants);
+      } else {
+        this.applyFilter(this.data.searchKey);
+      }
+    });
   },
 
   onNextPage() {
     const page = Math.min(this.data.totalPages, this.data.page + 1);
-    this.setData({ page }, () => this.applyFilter(this.data.searchKey));
+    this.setData({ page }, () => {
+      // 使用缓存的过滤结果，只需重新分页
+      if (this._cachedFilteredPlants) {
+        this.renderPage(this._cachedFilteredPlants);
+      } else {
+        this.applyFilter(this.data.searchKey);
+      }
+    });
   },
 
   goToAddPlant() {
@@ -240,6 +301,11 @@ Page({
   },
 
   goToDetail(e) {
+    // 防抖保护：防止用户快速重复点击
+    if (this._clicking) return;
+    this._clicking = true;
+    setTimeout(() => this._clicking = false, 500);
+    
     this._needRefresh = true; // 返回时强制刷新
     this._preserveState = true; // 保留当前页面状态
     const plantId = e.currentTarget.dataset.id;

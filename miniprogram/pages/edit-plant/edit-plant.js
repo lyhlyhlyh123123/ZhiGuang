@@ -189,16 +189,26 @@ Page({
   },
 
   onImgMove(e) {
-    this.setData({ imgX: e.detail.x, imgY: e.detail.y });
+    // 节流优化：避免频繁 setData
+    if (this._moveTimer) return;
+    this._moveTimer = setTimeout(() => {
+      this.setData({ imgX: e.detail.x, imgY: e.detail.y });
+      this._moveTimer = null;
+    }, 16); // 60fps
   },
 
   onImgScale(e) {
-    const newScale = this.data.imgScale * e.detail.scale;
-    this.setData({
-      imgScale: newScale,
-      imgW: Math.round(this.data.imgNaturalWidth * newScale),
-      imgH: Math.round(this.data.imgNaturalHeight * newScale)
-    });
+    // 节流优化：避免频繁 setData
+    if (this._scaleTimer) return;
+    this._scaleTimer = setTimeout(() => {
+      const newScale = this.data.imgScale * e.detail.scale;
+      this.setData({
+        imgScale: newScale,
+        imgW: Math.round(this.data.imgNaturalWidth * newScale),
+        imgH: Math.round(this.data.imgNaturalHeight * newScale)
+      });
+      this._scaleTimer = null;
+    }, 16); // 60fps
   },
 
   // 确认裁剪：把当前 canvas 内容导出为图片
