@@ -19,6 +19,7 @@ Page({
     todoPlants: [],
     todoAvatars: [],
     isTodoFilter: false,
+    speciesCount: 0, // 植物科数统计
   },
 
   onShow() {
@@ -108,6 +109,9 @@ Page({
 
   // 去云端拉取植物列表的方法
   fetchPlants() {
+    // ✅ 修复：添加请求锁，防止竞态条件
+    if (this._fetching) return;
+    
     // 节流：1分钟内不重复请求，但从子页面返回时强制刷新
     const now = Date.now();
     if (!this._needRefresh && this._lastFetchTime && now - this._lastFetchTime < 60000) {
@@ -115,6 +119,7 @@ Page({
     }
     this._needRefresh = false;
     this._lastFetchTime = now;
+    this._fetching = true;
     wx.showNavigationBarLoading();
 
     const app = getApp();
@@ -142,6 +147,15 @@ Page({
             waterCountdown: this.calcWaterCountdown(p)
           }));
 
+          // 统计植物科数（去重）
+          const speciesSet = new Set();
+          allPlants.forEach(p => {
+            if (p.species && p.species.trim() !== '' && p.species !== '未知') {
+              speciesSet.add(p.species.trim());
+            }
+          });
+          const speciesCount = speciesSet.size;
+
           const caredPlantIds = [...new Set(todayJournals.map(j => String(j.plantId)))];
           const todoPlants = allPlants.filter(p => !caredPlantIds.includes(String(p._id)));
 
@@ -149,6 +163,7 @@ Page({
           const shouldResetState = !this._preserveState;
           this.setData({
             allPlants,
+            speciesCount, // 设置科数统计
             todoCount: todoPlants.length,
             todoPlants,
             todoAvatars: todoPlants.slice(0, 3), // 只取前3个用于头像展示
@@ -163,6 +178,9 @@ Page({
           wx.hideNavigationBarLoading();
           console.error('【植光】获取植物列表失败', err);
           wx.showToast({ title: '加载失败', icon: 'none' });
+        })
+        .finally(() => {
+          this._fetching = false; // ✅ 释放请求锁
         });
     });
   },
@@ -199,20 +217,21 @@ Page({
       return;
     }
     
-    let filteredPlant = [];
+    // ✅ 修复：变量名改为复数形式，保持一致性
+    let filteredPlants = [];
     
     if (searchKey === 'TODO_CHECKIN') {
       // 打卡模式：显示今日未照顾列表
-      filteredPlant = this.data.todoPlants;
+      filteredPlants = this.data.todoPlants;
     } else {
       // 普通搜索模式（支持 / 联合查询）
       const key = searchKey || '';
       if (!key) {
-        filteredPlant = this.data.allPlants || [];
+        filteredPlants = this.data.allPlants || [];
       } else {
         // 支持 / 分隔符联合查询，例如：多肉/客厅
         const parts = key.split('/').map(s => s.trim().toLowerCase()).filter(Boolean);
-        filteredPlant = (this.data.allPlants || []).filter(item => {
+        filteredPlants = (this.data.allPlants || []).filter(item => {
           return parts.every(part => {
             const name = (item.nickname || '').toLowerCase();
             const species = (item.species || '').toLowerCase();
@@ -225,26 +244,26 @@ Page({
     
     // 缓存过滤结果
     this._lastSearchKey = searchKey;
-    this._cachedFilteredPlants = filteredPlant;
+    this._cachedFilteredPlants = filteredPlants;
     this._lastAllPlantsCount = (this.data.allPlants || []).length;
     
-    this.renderPage(filteredPlant);
+    this.renderPage(filteredPlants);
   },
 
   // 渲染分页数据（从 applyFilter 中提取）
-  renderPage(filteredPlant) {
-
-    const totalPages = Math.max(1, Math.ceil(filteredPlant.length / this.data.pageSize));
+  renderPage(filteredPlants) {
+    // ✅ 修复：参数名改为复数形式，保持一致性
+    const totalPages = Math.max(1, Math.ceil(filteredPlants.length / this.data.pageSize));
     const page = Math.min(this.data.page, totalPages);
     const start = (page - 1) * this.data.pageSize;
-    const plantList = filteredPlant.slice(start, start + this.data.pageSize);
+    const plantList = filteredPlants.slice(start, start + this.data.pageSize);
 
     this.setData({
-      filteredPlants: filteredPlant,
+      filteredPlants: filteredPlants,
       totalPages,
       page,
       plantList,
-      noResults: filteredPlant.length === 0 && (this._lastSearchKey !== '' && this._lastSearchKey !== 'TODO_CHECKIN'),
+      noResults: filteredPlants.length === 0 && (this._lastSearchKey !== '' && this._lastSearchKey !== 'TODO_CHECKIN'),
       noPlants: this.data.allPlants.length === 0
     });
   },
@@ -309,5 +328,13 @@ Page({
     this._preserveState = true; // 保留当前页面状态
     const plantId = e.currentTarget.dataset.id;
     wx.navigateTo({ url: `/pages/plant-detail/plant-detail?id=${plantId}` });
+  },
+
+  // ✅ 修复：页面卸载时清理定时器，防止内存泄漏
+  onUnload() {
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
   }
 });

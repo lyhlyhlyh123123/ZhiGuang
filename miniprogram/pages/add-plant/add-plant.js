@@ -6,6 +6,8 @@ Page({
     nickname: '',
     species: '',
     location: '',
+    source: '', // 来源（选填）
+    remark: '', // 备注（选填）
     adoptDate: '',
     tempImagePath: '',
     waterInterval: 7,
@@ -46,6 +48,14 @@ Page({
 
   quickSetLocation(e) {
     this.setData({ location: e.currentTarget.dataset.val });
+  },
+
+  onSourceInput(e) {
+    this.setData({ source: e.detail.value });
+  },
+
+  onRemarkInput(e) {
+    this.setData({ remark: e.detail.value });
   },
 
   chooseImage() {
@@ -116,13 +126,76 @@ Page({
     }, 16); // 60fps
   },
 
-  // 确认裁剪：把当前 canvas 内容导出为图片
+  // ✅ 修复：支持 Canvas 2D API，向后兼容旧版 API
   async confirmCrop() {
-    const { tempImagePath, imgX, imgY, imgScale, imgNaturalWidth, imgNaturalHeight } = this.data;
-    const boxW = 750 - 96;
-    const boxH = boxW * 3 / 4;
+    const { tempImagePath, imgX, imgY, imgScale, imgNaturalWidth, imgNaturalHeight, boxW, boxH } = this.data;
     const dpr = wx.getSystemInfoSync().pixelRatio;
 
+    return new Promise((resolve, reject) => {
+      // 优先使用 Canvas 2D API
+      const query = wx.createSelectorQuery().in(this);
+      query.select('#cropCanvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          if (res && res[0] && res[0].node) {
+            // 使用新版 Canvas 2D API
+            this._cropWithCanvas2D(res[0].node, {
+              tempImagePath, imgX, imgY, imgScale,
+              imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr
+            }).then(resolve).catch(() => {
+              // 降级到旧版 API
+              this._cropWithOldCanvas({
+                tempImagePath, imgX, imgY, imgScale,
+                imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr
+              }).then(resolve).catch(reject);
+            });
+          } else {
+            // 降级到旧版 API
+            this._cropWithOldCanvas({
+              tempImagePath, imgX, imgY, imgScale,
+              imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr
+            }).then(resolve).catch(reject);
+          }
+        });
+    });
+  },
+
+  // Canvas 2D API 实现
+  async _cropWithCanvas2D(canvas, params) {
+    const { tempImagePath, imgX, imgY, imgScale, imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr } = params;
+    
+    return new Promise((resolve, reject) => {
+      canvas.width = boxW * dpr;
+      canvas.height = boxH * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      
+      const img = canvas.createImage();
+      img.onload = () => {
+        ctx.drawImage(img, imgX, imgY, imgNaturalWidth * imgScale, imgNaturalHeight * imgScale);
+        
+        wx.canvasToTempFilePath({
+          canvas,
+          x: 0, y: 0,
+          width: boxW, height: boxH,
+          destWidth: boxW * dpr,
+          destHeight: boxH * dpr,
+          success: res => {
+            this.setData({ tempImagePath: res.tempFilePath, showCropPreview: false });
+            resolve(res.tempFilePath);
+          },
+          fail: reject
+        }, this);
+      };
+      img.onerror = reject;
+      img.src = tempImagePath;
+    });
+  },
+
+  // 旧版 Canvas API 实现（兼容）
+  async _cropWithOldCanvas(params) {
+    const { tempImagePath, imgX, imgY, imgScale, imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr } = params;
+    
     return new Promise((resolve, reject) => {
       const ctx = wx.createCanvasContext('cropCanvas', this);
       ctx.drawImage(
@@ -152,7 +225,7 @@ Page({
     if (this._submitting) return;
     this._submitting = true;
 
-    const { nickname, species, location, adoptDate, tempImagePath, waterInterval } = this.data;
+    const { nickname, species, location, source, remark, adoptDate, tempImagePath, waterInterval } = this.data;
 
     if (!nickname || !species || !location || !tempImagePath) {
       this._submitting = false;
@@ -181,6 +254,8 @@ Page({
           nickname,
           species,
           location,
+          source: source || '', // 来源（选填）
+          remark: remark || '', // 备注（选填）
           adoptDate: adoptDate || todayStr,
           photoFileID: fileID,
           waterInterval,
@@ -219,4 +294,16 @@ Page({
       this.setData({ waterInterval: this.data.waterInterval + 1 });
     }
   },
+
+  // ✅ 修复：页面卸载时清理定时器，防止内存泄漏
+  onUnload() {
+    if (this._moveTimer) {
+      clearTimeout(this._moveTimer);
+      this._moveTimer = null;
+    }
+    if (this._scaleTimer) {
+      clearTimeout(this._scaleTimer);
+      this._scaleTimer = null;
+    }
+  }
 });

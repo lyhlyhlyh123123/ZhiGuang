@@ -77,12 +77,21 @@ page {
   display: block;
 }
 
+/* 动作轮播 */
+.action-swiper {
+  width: 100%;
+  height: 490rpx;
+  margin-bottom: 50rpx;
+}
+
 /* 动作网格 */
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 18rpx;
-  margin-bottom: 50rpx;
+  padding: 0 16rpx 30rpx;
+  height: 100%;
+  align-content: start;
 }
 
 .action-item {
@@ -118,6 +127,8 @@ page {
 .icon-Scissors { color: #10B981; }
 .icon-penzai { color: #22C55E; }
 .icon-qingkong { color: #EF4444; }
+.icon-lichengbei { color: #F59E0B; }
+.icon-qita { color: #6B7280; }
 .icon-back { color: #22C55E; }
 .icon-plus { color: #FFFFFF; }
 .icon-close { color: #FFFFFF; }

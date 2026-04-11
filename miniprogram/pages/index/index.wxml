@@ -11,7 +11,7 @@
       <view class="greeting-box">
         <text class="date-text">{{currentDate}}</text>
         <text class="greeting-title">你好，</text>
-        <text class="greeting-name">{{userInfo && userInfo.nickName ? userInfo.nickName : ''}}园丁 👋</text>
+        <text class="greeting-name">{{userInfo && userInfo.nickName ? userInfo.nickName : ''}}园丁</text>
       </view>
       <view class="avatar-box" bindtap="handleProfileTap">
         <image class="user-avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill" wx:if="{{userInfo && userInfo.avatarUrl}}"></image>
@@ -72,7 +72,7 @@
       <view class="list-title-row">
         <view class="list-title-dot"></view>
         <text class="list-title">我的绿植</text>
-        <view class="plant-count-badge">{{allPlants.length || 0}}</view>
+        <view class="plant-count-badge">拥有 {{allPlants.length || 0}} 株植物</view>
       </view>
     </view>
 

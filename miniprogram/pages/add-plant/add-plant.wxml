@@ -34,8 +34,8 @@
       </block>
     </view>
 
-    <!-- 隐藏 canvas 用于截图 -->
-    <canvas canvas-id="cropCanvas" class="hidden-canvas" style="width:{{boxW}}px;height:{{boxH}}px;position:fixed;top:-9999px;left:-9999px;"></canvas>
+    <!-- 隐藏 canvas 用于截图 - 使用 type="2d" 支持新 API -->
+    <canvas type="2d" id="cropCanvas" class="hidden-canvas" style="width:{{boxW}}px;height:{{boxH}}px;position:fixed;top:-9999px;left:-9999px;"></canvas>
 
     <view class="section-title">基础信息</view>
     <view class="info-group">
@@ -61,12 +61,22 @@
       </view>
       
       <view class="input-wrapper">
+        <text class="input-label">来源 <text style="color:#9CA3AF;font-weight:400;">（选填）</text></text>
+        <input class="styled-input" placeholder="例如：花市、朋友赠送、网购..." value="{{source}}" bindinput="onSourceInput" />
+      </view>
+      
+      <view class="input-wrapper">
         <text class="input-label">到家日期 <text style="color:#9CA3AF;font-weight:400;">（选填）</text></text>
         <picker mode="date" value="{{adoptDate}}" bindchange="onDateChange">
           <view class="picker-text {{adoptDate ? '' : 'placeholder-color'}}">
             {{adoptDate || '选填，记录它来到你身边的日期'}}
           </view>
         </picker>
+      </view>
+
+      <view class="input-wrapper">
+        <text class="input-label">备注 <text style="color:#9CA3AF;font-weight:400;">（选填）</text></text>
+        <input class="styled-input" placeholder="记录一些特殊的备注信息..." value="{{remark}}" bindinput="onRemarkInput" />
       </view>
     </view>
 

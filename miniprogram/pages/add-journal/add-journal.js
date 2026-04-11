@@ -12,7 +12,9 @@ Page({
       { label: '施肥', value: 'fertilize', icon: 'icon-feiliao', selected: false },
       { label: '修剪', value: 'prune', icon: 'icon-Scissors', selected: false },
       { label: '换盆', value: 'repot', icon: 'icon-penzai', selected: false },
-      { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false }
+      { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false },
+      { label: '里程碑', value: 'milestone', icon: 'icon-lichengbei', selected: false },
+      { label: '其他', value: 'other', icon: 'icon-qita', selected: false }
     ]
   },
 

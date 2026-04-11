@@ -6,6 +6,41 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "9166442",
+      "name": "其他",
+      "font_class": "qita",
+      "unicode": "e646",
+      "unicode_decimal": 58950
+    },
+    {
+      "icon_id": "32731473",
+      "name": "里程碑",
+      "font_class": "lichengbei",
+      "unicode": "e749",
+      "unicode_decimal": 59209
+    },
+    {
+      "icon_id": "1167131",
+      "name": "备注",
+      "font_class": "beizhu",
+      "unicode": "e615",
+      "unicode_decimal": 58901
+    },
+    {
+      "icon_id": "44226068",
+      "name": "来源",
+      "font_class": "laiyuan",
+      "unicode": "e641",
+      "unicode_decimal": 58945
+    },
+    {
+      "icon_id": "777843",
+      "name": "赞",
+      "font_class": "icon",
+      "unicode": "e651",
+      "unicode_decimal": 58961
+    },
+    {
       "icon_id": "12659613",
       "name": "运输地点",
       "font_class": "yunshudidian",

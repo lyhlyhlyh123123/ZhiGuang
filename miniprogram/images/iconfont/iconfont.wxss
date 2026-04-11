@@ -2,9 +2,9 @@
 /* 项目 ID: 5145551 */
 @font-face {
   font-family: 'iconfont';
-  src: url('//at.alicdn.com/t/c/font_5145551_dj977wsxio.woff2?t=1774284532745') format('woff2'),
-       url('//at.alicdn.com/t/c/font_5145551_dj977wsxio.woff?t=1774284532745') format('woff'),
-       url('//at.alicdn.com/t/c/font_5145551_dj977wsxio.ttf?t=1774284532745') format('truetype');
+  src: url('https://at.alicdn.com/t/c/font_5145551_xleh746v46.woff2?t=1775920628419') format('woff2'),
+       url('https://at.alicdn.com/t/c/font_5145551_xleh746v46.woff?t=1775920628419') format('woff'),
+       url('https://at.alicdn.com/t/c/font_5145551_xleh746v46.ttf?t=1775920628419') format('truetype');
 }
 
 .iconfont {
@@ -31,6 +31,11 @@
 }
 
 /* 图标定义 - 根据 iconfont.css */
+.icon-qita:before { content: "\e646"; }
+.icon-lichengbei:before { content: "\e749"; }
+.icon-beizhu:before { content: "\e615"; }
+.icon-laiyuan:before { content: "\e641"; }
+.icon-icon:before { content: "\e651"; }
 .icon-yunshudidian:before { content: "\e606"; }
 .icon-xiugaimingcheng:before { content: "\e64c"; }
 .icon-shanchu:before { content: "\e600"; }
@@ -87,9 +92,14 @@
 .icon-upload { color: #3B82F6; } /* 蓝色 - 上传 */
 .icon-wendu { color: #EF4444; } /* 红色 - 温度 */
 .icon-qingkong { color: #EF4444; } /* 红色 - 清空 */
-.icon-feiliao { color: #F59E0B; } /* 橙色 - 料 */
+.icon-feiliao { color: #F59E0B; } /* 橙色 - 肥料 */
 .icon-xiugaimingcheng { color: #8B5CF6; } /* 紫色 - 修改名称 */
 .icon-shanchu { color: #EF4444; } /* 红色 - 删除 */
+.icon-beizhu { color: #D97706; } /* 橙色 - 备注 */
+.icon-laiyuan { color: #10B981; } /* 绿色 - 来源 */
+.icon-icon { color: #6B7280; } /* 灰色 - 点赞(大拇指) */
+.icon-qita { color: #9CA3AF; } /* 灰色 - 其他 */
+.icon-lichengbei { color: #F59E0B; } /* 橙色 - 里程碑 */
 
 /* 色彩主题类 */
 .icon.icon-primary { color: #22C55E !important; }

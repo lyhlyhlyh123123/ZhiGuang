@@ -10,7 +10,9 @@ Page({
     isOwner: false,
     adoptDays: 0,
     currentOpenid: '',
-    loading: true
+    loading: true,
+    likeCount: 0,
+    hasLiked: false
   },
 
   onLoad(options) {
@@ -56,9 +58,35 @@ Page({
       const adoptDate = new Date(plant.adoptDate).getTime();
       const adoptDays = Math.floor(Math.max(0, today - adoptDate) / (1000 * 60 * 60 * 24)) + 1;
 
-      this.setData({ plantInfo: plant, isOwner, adoptDays, loading: false });
+      // 处理点赞数据
+      const likes = plant.likes || [];
+      const likeCount = likes.length;
+      const hasLiked = likes.includes(this.data.currentOpenid);
+
+      this.setData({
+        plantInfo: plant,
+        isOwner,
+        adoptDays,
+        loading: false,
+        likeCount,
+        hasLiked
+      });
       wx.setNavigationBarTitle({ title: plant.nickname + '的成长' });
       this._processJournals(journals || []);
+
+      // 如果是访客（非所有者），且首次加载，显示点赞提示
+      if (!isOwner && !this._hasShownLikeTip) {
+        this._hasShownLikeTip = true;
+        setTimeout(() => {
+          wx.showModal({
+            title: '💚 温馨提示',
+            content: `喜欢这个${plant.nickname}吗？点击右上角的爱心可以为TA点赞支持哦~`,
+            showCancel: false,
+            confirmText: '知道了',
+            confirmColor: '#22C55E'
+          });
+        }, 800);
+      }
 
       // 提前转换封面图为临时链接，供分享使用
       if (plant.photoFileID && plant.photoFileID.startsWith('cloud://')) {
@@ -102,7 +130,7 @@ Page({
 
   // 亲密度计算
   calcIntimacy(journals) {
-    const ACTION_SCORE = { '浇水': 3, '晒太阳': 2, '施肥': 5, '修剪': 4, '换盆': 8, '除虫': 4 };
+    const ACTION_SCORE = { '浇水': 3, '晒太阳': 2, '施肥': 5, '修剪': 4, '换盆': 8, '除虫': 4, '里程碑': 6, '其他': 2 };
     const INIT_SCORE = 30;          // 初始分
     const DEFAULT_ACTION_SCORE = 2; // 未知动作默认分
     const STREAK_BONUS = 2;         // 每连续天数加成
@@ -306,8 +334,18 @@ Page({
   onShareAppMessage() {
     const { plantInfo, intimacy } = this.data;
     if (!plantInfo) return { title: '植光 - 植物养护记录' };
+    
+    // 分享成功后显示提示
+    setTimeout(() => {
+      wx.showToast({
+        title: '已分享，朋友可以点赞支持',
+        icon: 'none',
+        duration: 2500
+      });
+    }, 500);
+    
     const shareObj = {
-      title: `看看我养的${plantInfo.nickname}，亲密度已经 ${intimacy}% 啦！`,
+      title: `给你看看我养的${plantInfo.nickname}，喜欢就进入主页点点赞吧！`,
       path: `/pages/plant-detail/plant-detail?id=${this.data.plantId}`
     };
     // 使用提前缓存的临时链接作为封面，否则微信自动截图
@@ -320,6 +358,16 @@ Page({
   onShareTimeline() {
     const { plantInfo, intimacy } = this.data;
     if (!plantInfo) return { title: '植光 - 植物养护记录' };
+    
+    // 分享到朋友圈后提示
+    setTimeout(() => {
+      wx.showToast({
+        title: '已分享，朋友可以点赞',
+        icon: 'none',
+        duration: 2500
+      });
+    }, 500);
+    
     const shareObj = {
       title: `${plantInfo.nickname}的成长日记 | 亲密度 ${intimacy}%`,
       query: `id=${this.data.plantId}`
@@ -328,5 +376,68 @@ Page({
       shareObj.imageUrl = this._shareCoverUrl;
     }
     return shareObj;
+  },
+
+  // 点赞/取消点赞
+  toggleLike() {
+    if (!this.data.currentOpenid) {
+      wx.showToast({ title: '请先登录', icon: 'none' });
+      return;
+    }
+
+    const { plantId, hasLiked, currentOpenid } = this.data;
+    
+    wx.showLoading({ title: hasLiked ? '取消中...' : '点赞中...' });
+
+    // 使用云数据库更新
+    const _ = db.command;
+    const updateData = hasLiked
+      ? { likes: _.pull(currentOpenid) }  // 取消点赞：从数组中移除
+      : { likes: _.addToSet(currentOpenid) };  // 点赞：添加到数组(自动去重)
+
+    db.collection('plants').doc(plantId).update({
+      data: updateData
+    }).then(() => {
+      wx.hideLoading();
+      
+      // 更新本地状态
+      const newLikeCount = hasLiked ? this.data.likeCount - 1 : this.data.likeCount + 1;
+      this.setData({
+        hasLiked: !hasLiked,
+        likeCount: newLikeCount
+      });
+
+      wx.showToast({
+        title: hasLiked ? '已取消' : '点赞成功',
+        icon: 'success',
+        duration: 1500
+      });
+    }).catch(err => {
+      wx.hideLoading();
+      console.error('【植光】点赞失败:', err);
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' });
+    });
+  },
+
+  // 显示植物详情(来源和备注)
+  showPlantDetail() {
+    const { plantInfo } = this.data;
+    if (!plantInfo) return;
+
+    const content = [];
+    if (plantInfo.source) {
+      content.push(`来源：${plantInfo.source}`);
+    }
+    if (plantInfo.remark) {
+      content.push(`备注：${plantInfo.remark}`);
+    }
+
+    wx.showModal({
+      title: '详细信息',
+      content: content.join('\n\n'),
+      showCancel: false,
+      confirmText: '知道了',
+      confirmColor: '#22C55E'
+    });
   }
 });

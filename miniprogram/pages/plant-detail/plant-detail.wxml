@@ -32,33 +32,71 @@
             <text class="species-icon iconfont icon-penzai"></text>
             <text class="plant-latin">{{plantInfo.species}}</text>
           </view>
-          <view class="name-actions" wx:if="{{isOwner}}">
-            <view class="edit-btn btn-primary" bindtap="goToEditPlant">
+          <view class="name-actions">
+            <!-- 点赞按钮 -->
+            <view class="like-button-mini {{hasLiked ? 'liked' : ''}}" bindtap="toggleLike">
+              <text class="like-icon-mini iconfont icon-icon"></text>
+              <text class="like-count-mini">{{likeCount}}</text>
+            </view>
+            <!-- 编辑和删除按钮（仅所有者可见） -->
+            <view wx:if="{{isOwner}}" class="edit-btn btn-primary" bindtap="goToEditPlant">
               <text class="edit-text">编辑</text>
             </view>
-            <view class="edit-btn btn-danger" bindtap="confirmDelete">
+            <view wx:if="{{isOwner}}" class="edit-btn btn-danger" bindtap="confirmDelete">
               <text class="iconfont icon-delete edit-text"></text>
             </view>
           </view>
         </view>
       
-      <view class="info-tags">
-        <view class="info-tag">
-          <text class="tag-icon iconfont icon-yunshudidian"></text>
-          <text class="tag-label">位置</text>
-          <text class="tag-value">{{plantInfo.location || '未设置'}}</text>
-        </view>
-        <view class="info-tag">
-          <text class="tag-icon iconfont icon-calendar"></text>
-          <text class="tag-label">陪伴</text>
-          <text class="tag-value">{{adoptDays}}天</text>
-        </view>
-        <view class="info-tag">
-          <text class="tag-icon iconfont icon-heart"></text>
-          <text class="tag-label">亲密度</text>
-          <text class="tag-value highlight">{{intimacy}}%</text>
-        </view>
-      </view>
+      <!-- 信息卡片轮播 -->
+      <swiper class="info-swiper" indicator-dots indicator-color="rgba(0,0,0,0.3)" indicator-active-color="#22C55E" circular>
+        
+        <!-- 第1页：位置、陪伴、亲密度（三列） -->
+        <swiper-item>
+          <view class="swiper-card">
+            <view class="card-three-col">
+              <view class="col-item">
+                <text class="col-icon iconfont icon-yunshudidian"></text>
+                <text class="col-label">位置</text>
+                <text class="col-value">{{plantInfo.location || '未设置'}}</text>
+              </view>
+              <view class="col-item">
+                <text class="col-icon iconfont icon-calendar"></text>
+                <text class="col-label">陪伴</text>
+                <text class="col-value">{{adoptDays}}天</text>
+              </view>
+              <view class="col-item">
+                <text class="col-icon iconfont icon-heart"></text>
+                <text class="col-label">亲密度</text>
+                <text class="col-value highlight">{{intimacy}}%</text>
+              </view>
+            </view>
+          </view>
+        </swiper-item>
+
+        <!-- 第2页：来源 -->
+        <swiper-item>
+          <view class="swiper-card">
+            <view class="card-single">
+              <text class="single-icon iconfont icon-laiyuan"></text>
+              <text class="single-label">来源</text>
+              <text class="single-value">{{plantInfo.source || '无'}}</text>
+            </view>
+          </view>
+        </swiper-item>
+
+        <!-- 第3页：备注 -->
+        <swiper-item>
+          <view class="swiper-card">
+            <view class="card-single">
+              <text class="single-icon iconfont icon-beizhu"></text>
+              <text class="single-label">备注</text>
+              <text class="single-value">{{plantInfo.remark || '无'}}</text>
+            </view>
+          </view>
+        </swiper-item>
+
+      </swiper>
     </view>
 
     <!-- 养护信息区 -->
@@ -93,7 +131,7 @@
           </view>
         </view>
         <view class="timeline-content">
-          <view class="timeline-card" bindlongpress="deleteJournal" data-id="{{item._id}}" data-index="{{index}}">
+          <view class="timeline-card" bindlongpress="{{isOwner ? 'deleteJournal' : ''}}" data-id="{{item._id}}" data-index="{{index}}">
             <view class="card-header">
               <!-- 渲染动作标签列表 -->
               <view class="action-tag-list" wx:if="{{item.renderActions && item.renderActions.length > 0}}">
@@ -129,8 +167,8 @@
 
   </view>
 
-  <view class="bottom-action-bar">
-    <button class="btn-record" bindtap="openJournalPage" wx:if="{{isOwner}}">
+  <view class="bottom-action-bar" wx:if="{{isOwner}}">
+    <button class="btn-record" bindtap="openJournalPage">
       <text class="btn-icon icon icon-jilu"></text>
       <text class="btn-text">记录成长</text>
     </button>

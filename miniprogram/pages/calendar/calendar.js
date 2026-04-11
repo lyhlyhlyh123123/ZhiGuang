@@ -46,12 +46,29 @@ Page({
     const _ = db.command;
     
     try {
-      const res = await db.collection('journals')
-        .where({ createTime: _.gte(start).and(_.lt(end)) })
-        .limit(200).get();
+      // ✅ 修复：使用分页查询避免数据遗漏
+      const MAX_LIMIT = 100;
+      let allJournals = [];
+      let hasMore = true;
+      let skip = 0;
+
+      while (hasMore) {
+        const res = await db.collection('journals')
+          .where({ createTime: _.gte(start).and(_.lt(end)) })
+          .skip(skip)
+          .limit(MAX_LIMIT)
+          .get();
+        
+        allJournals = allJournals.concat(res.data);
+        hasMore = res.data.length === MAX_LIMIT;
+        skip += MAX_LIMIT;
+        
+        // 安全上限：单月最多查500条（防止异常数据）
+        if (skip >= 500) break;
+      }
       
       const monthStats = {};
-      res.data
+      allJournals
         .filter(j => j.plantName && j.plantName.trim())
         .forEach(j => {
           const d = new Date(j.createTime);

@@ -11,7 +11,9 @@ Page({
       { label: '施肥', value: 'fertilize', icon: 'icon-feiliao', selected: false },
       { label: '修剪', value: 'prune', icon: 'icon-Scissors', selected: false },
       { label: '换盆', value: 'repot', icon: 'icon-penzai', selected: false },
-      { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false }
+      { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false },
+      { label: '里程碑', value: 'milestone', icon: 'icon-lichengbei', selected: false },
+      { label: '其他', value: 'other', icon: 'icon-qita', selected: false }
     ],
     note: '',
     submitting: false,
@@ -104,12 +106,16 @@ Page({
   selectAll() {
     const allIds = this.data.plantList.map(p => p._id);
     const plantList = this.data.plantList.map(p => ({ ...p, _selected: true }));
-    this.setData({ selectedIds: allIds, plantList });
+    // ✅ 修复：同步更新 displayList，确保界面显示正确
+    const displayList = this.data.displayList.map(p => ({ ...p, _selected: true }));
+    this.setData({ selectedIds: allIds, plantList, displayList });
   },
 
   clearAll() {
     const plantList = this.data.plantList.map(p => ({ ...p, _selected: false }));
-    this.setData({ selectedIds: [], plantList });
+    // ✅ 修复：同步更新 displayList，确保界面显示正确
+    const displayList = this.data.displayList.map(p => ({ ...p, _selected: false }));
+    this.setData({ selectedIds: [], plantList, displayList });
   },
 
   toggleAction(e) {
@@ -157,12 +163,12 @@ Page({
       const resetActions = this.data.actions.map(a => ({ ...a, selected: false }));
       const resetPlantList = this.data.plantList.map(p => ({ ...p, _selected: false }));
       this.setData({ selectedIds: [], note: '', submitting: false, actions: resetActions, plantList: resetPlantList, displayList: resetPlantList, activeTag: '', filterSpecies: '', filterLocation: '', batchSearchKey: '' });
-      this._submitting = false;
     } catch(err) {
       wx.hideLoading();
       wx.showToast({ title: '操作失败，请重试', icon: 'none' });
+      // ✅ 修复：统一使用 setData 管理状态，移除冗余的 this._submitting
       this.setData({ submitting: false });
-      console.error(err);
+      console.error('【植光】批量记录失败:', err);
     }
   }
 });
