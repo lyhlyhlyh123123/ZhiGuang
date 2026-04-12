@@ -49,10 +49,13 @@
           class="action-item {{item.selected ? 'active' : ''}}"
           wx:for="{{actions}}" wx:for-index="idx" wx:key="value"
           wx:if="{{idx < 4}}"
-          bindtap="toggleAction" data-index="{{idx}}"
+          bindtap="toggleAction"
+          bindlongpress="longPressAction"
+          data-index="{{idx}}"
         >
           <text class="iconfont {{item.icon}} action-icon"></text>
           <text class="action-label">{{item.label}}</text>
+          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
         </view>
       </view>
     </swiper-item>
@@ -64,10 +67,13 @@
           class="action-item {{item.selected ? 'active' : ''}}"
           wx:for="{{actions}}" wx:for-index="idx" wx:key="value"
           wx:if="{{idx >= 4}}"
-          bindtap="toggleAction" data-index="{{idx}}"
+          bindtap="toggleAction"
+          bindlongpress="longPressAction"
+          data-index="{{idx}}"
         >
           <text class="iconfont {{item.icon}} action-icon"></text>
           <text class="action-label">{{item.label}}</text>
+          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
         </view>
       </view>
     </swiper-item>

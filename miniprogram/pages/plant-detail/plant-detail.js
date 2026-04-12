@@ -1,4 +1,5 @@
 const db = wx.cloud.database();
+const { getPlantPhotos } = require('../../utils/imageHelper.js');
 
 Page({
   data: {
@@ -12,7 +13,8 @@ Page({
     currentOpenid: '',
     loading: true,
     likeCount: 0,
-    hasLiked: false
+    hasLiked: false,
+    plantPhotos: [] // 植物图片数组
   },
 
   onLoad(options) {
@@ -58,10 +60,24 @@ Page({
       const adoptDate = new Date(plant.adoptDate).getTime();
       const adoptDays = Math.floor(Math.max(0, today - adoptDate) / (1000 * 60 * 60 * 24)) + 1;
 
-      // 处理点赞数据
+      // 处理点赞数据（支持匿名用户）
       const likes = plant.likes || [];
       const likeCount = likes.length;
-      const hasLiked = likes.includes(this.data.currentOpenid);
+      
+      // 获取当前用户标识（包括匿名用户）
+      let currentUserId = this.data.currentOpenid;
+      if (!currentUserId) {
+        currentUserId = wx.getStorageSync('anonymousUserId');
+        if (!currentUserId) {
+          currentUserId = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          wx.setStorageSync('anonymousUserId', currentUserId);
+        }
+      }
+      
+      const hasLiked = likes.includes(currentUserId);
+
+      // 获取图片列表（兼容新旧数据）
+      const photos = getPlantPhotos(plant);
 
       this.setData({
         plantInfo: plant,
@@ -69,7 +85,8 @@ Page({
         adoptDays,
         loading: false,
         likeCount,
-        hasLiked
+        hasLiked,
+        plantPhotos: photos
       });
       wx.setNavigationBarTitle({ title: plant.nickname + '的成长' });
       this._processJournals(journals || []);
@@ -79,8 +96,8 @@ Page({
         this._hasShownLikeTip = true;
         setTimeout(() => {
           wx.showModal({
-            title: '💚 温馨提示',
-            content: `喜欢这个${plant.nickname}吗？点击右上角的爱心可以为TA点赞支持哦~`,
+            title: '温馨提示',
+            content: `喜欢这株${plant.nickname}吗？点击右上角的爱心可以为TA点赞支持哦~`,
             showCancel: false,
             confirmText: '知道了',
             confirmColor: '#22C55E'
@@ -130,7 +147,7 @@ Page({
 
   // 亲密度计算
   calcIntimacy(journals) {
-    const ACTION_SCORE = { '浇水': 3, '晒太阳': 2, '施肥': 5, '修剪': 4, '换盆': 8, '除虫': 4, '里程碑': 6, '其他': 2 };
+    const ACTION_SCORE = { '浇水': 3, '晒太阳': 2, '施肥': 5, '修剪': 4, '换盆': 8, '除虫': 4, '里程碑': 6, '自定义': 2 };
     const INIT_SCORE = 30;          // 初始分
     const DEFAULT_ACTION_SCORE = 2; // 未知动作默认分
     const STREAK_BONUS = 2;         // 每连续天数加成
@@ -250,9 +267,13 @@ Page({
     this.setData({ journalList });
   },
 
+  // 预览植物图片
   previewImage(e) {
-    const { current, list } = e.currentTarget.dataset;
-    wx.previewImage({ current, urls: list });
+    const { current } = e.currentTarget.dataset;
+    wx.previewImage({
+      current,
+      urls: this.data.plantPhotos
+    });
   },
 
   previewJournalImg(e) {
@@ -305,17 +326,61 @@ Page({
     wx.showModal({
       title: '确认删除',
       content: '删除后数据将无法恢复，确定吗？',
+      confirmColor: '#EF4444',
       success: (res) => {
         if (!res.confirm) return;
         wx.showLoading({ title: '删除中...' });
+        
+        // ✅ 修复：删除时同步清理云存储文件
+        const fileIDs = [];
+        
         db.collection('journals')
           .where({ plantId: this.data.plantId })
           .get()
           .then(journalRes => {
+            // 收集日记中的所有图片文件ID
+            journalRes.data.forEach(j => {
+              if (j.photoList && Array.isArray(j.photoList)) {
+                fileIDs.push(...j.photoList);
+              }
+              if (j.photoFileID && j.photoFileID.startsWith('cloud://')) {
+                fileIDs.push(j.photoFileID);
+              }
+            });
+            
+            // 删除所有日记数据库记录
             const tasks = journalRes.data.map(j => db.collection('journals').doc(j._id).remove());
             return Promise.all(tasks);
           })
-          .then(() => db.collection('plants').doc(this.data.plantId).remove())
+          .then(() => {
+            // 收集植物的所有图片文件ID
+            const { plantInfo } = this.data;
+            if (plantInfo) {
+              if (plantInfo.photoList && Array.isArray(plantInfo.photoList)) {
+                fileIDs.push(...plantInfo.photoList);
+              }
+              if (plantInfo.photoFileID && plantInfo.photoFileID.startsWith('cloud://')) {
+                fileIDs.push(plantInfo.photoFileID);
+              }
+            }
+            
+            // 删除植物数据库记录
+            return db.collection('plants').doc(this.data.plantId).remove();
+          })
+          .then(() => {
+            // 删除云存储文件（去重）
+            const uniqueFileIDs = [...new Set(fileIDs)].filter(id => id && id.startsWith('cloud://'));
+            if (uniqueFileIDs.length > 0) {
+              return wx.cloud.deleteFile({
+                fileList: uniqueFileIDs
+              }).then(delRes => {
+                console.log(`【植光】已清理 ${uniqueFileIDs.length} 个云存储文件`);
+                return delRes;
+              }).catch(err => {
+                console.warn('【植光】云存储文件清理失败（不影响删除）:', err);
+              });
+            }
+          })
           .then(() => {
             wx.hideLoading();
             wx.showToast({ title: '已删除' });
@@ -378,44 +443,67 @@ Page({
     return shareObj;
   },
 
-  // 点赞/取消点赞
+  // 点赞/取消点赞 - 使用云函数（支持匿名用户）
   toggleLike() {
-    if (!this.data.currentOpenid) {
-      wx.showToast({ title: '请先登录', icon: 'none' });
-      return;
-    }
-
     const { plantId, hasLiked, currentOpenid } = this.data;
     
+    // 获取或生成用户标识（支持匿名）
+    let userId = currentOpenid;
+    if (!userId) {
+      // 匿名用户：从本地存储获取或生成唯一标识
+      userId = wx.getStorageSync('anonymousUserId');
+      if (!userId) {
+        userId = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        wx.setStorageSync('anonymousUserId', userId);
+      }
+    }
+    
+    console.log('【植光】点赞操作 - plantId:', plantId, 'hasLiked:', hasLiked, 'userId:', userId);
     wx.showLoading({ title: hasLiked ? '取消中...' : '点赞中...' });
 
-    // 使用云数据库更新
-    const _ = db.command;
-    const updateData = hasLiked
-      ? { likes: _.pull(currentOpenid) }  // 取消点赞：从数组中移除
-      : { likes: _.addToSet(currentOpenid) };  // 点赞：添加到数组(自动去重)
-
-    db.collection('plants').doc(plantId).update({
-      data: updateData
-    }).then(() => {
+    // 调用云函数处理点赞
+    wx.cloud.callFunction({
+      name: 'toggleLike',
+      data: {
+        plantId,
+        anonymousId: userId  // 传递用户标识（包括匿名用户）
+      }
+    }).then(res => {
       wx.hideLoading();
       
+      console.log('【植光】云函数返回结果:', res);
+      
+      if (!res.result) {
+        console.error('【植光】云函数返回结果为空');
+        wx.showToast({ title: '云函数调用失败', icon: 'none' });
+        return;
+      }
+      
+      const { success, hasLiked: newHasLiked, likeCount: newLikeCount, error } = res.result;
+      
+      if (!success) {
+        console.error('【植光】点赞失败 - 错误:', error);
+        wx.showToast({ title: `操作失败: ${error || '未知错误'}`, icon: 'none', duration: 3000 });
+        return;
+      }
+
       // 更新本地状态
-      const newLikeCount = hasLiked ? this.data.likeCount - 1 : this.data.likeCount + 1;
       this.setData({
-        hasLiked: !hasLiked,
+        hasLiked: newHasLiked,
         likeCount: newLikeCount
       });
 
+      console.log('【植光】点赞成功 - 新状态:', { hasLiked: newHasLiked, likeCount: newLikeCount });
+
       wx.showToast({
-        title: hasLiked ? '已取消' : '点赞成功',
+        title: newHasLiked ? '点赞成功 ❤️' : '已取消',
         icon: 'success',
         duration: 1500
       });
     }).catch(err => {
       wx.hideLoading();
-      console.error('【植光】点赞失败:', err);
-      wx.showToast({ title: '操作失败，请重试', icon: 'none' });
+      console.error('【植光】点赞调用失败 - 完整错误:', err);
+      wx.showToast({ title: `调用失败: ${err.errMsg || '请检查网络'}`, icon: 'none', duration: 3000 });
     });
   },
 
@@ -435,6 +523,20 @@ Page({
     wx.showModal({
       title: '详细信息',
       content: content.join('\n\n'),
+      showCancel: false,
+      confirmText: '知道了',
+      confirmColor: '#22C55E'
+    });
+  },
+
+  // 显示完整备注
+  showFullRemark() {
+    const { plantInfo } = this.data;
+    if (!plantInfo || !plantInfo.remark) return;
+    
+    wx.showModal({
+      title: '备注信息',
+      content: plantInfo.remark,
       showCancel: false,
       confirmText: '知道了',
       confirmColor: '#22C55E'

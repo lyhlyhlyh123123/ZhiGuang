@@ -4,7 +4,7 @@ const nodemailer = require('nodemailer');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 exports.main = async (event) => {
-  const { content, contact } = event;
+  const { content } = event;
   if (!content || !content.trim()) {
     return { success: false, error: '内容不能为空' };
   }
@@ -41,7 +41,7 @@ exports.main = async (event) => {
       from: '"植光反馈" <2971665141@qq.com>',
       to: '2971665141@qq.com',
       subject: '【植光】用户意见反馈',
-      text: `反馈内容：\n${content}\n\n联系方式：${contact || '未填写'}\n\n提交时间：${timeStr}`
+      text: `反馈内容：\n${content}\n\n提交时间：${timeStr}`
     });
     return { success: true };
   } catch (err) {

@@ -141,6 +141,18 @@ page { background: #F0FDF4; font-family: -apple-system, sans-serif; }
 }
 .action-icon { font-size: 40rpx; margin-bottom: 8rpx; }
 .action-label { font-size: 24rpx; color: #1E3B28; font-weight: 700; }
+.custom-hint {
+  position: absolute;
+  right: 6rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15rpx;
+  color: #0a0a0a;
+  opacity: 0.6;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  line-height: 1.2;
+}
 .icon-Water { color: #3B82F6; } .icon-sun { color: #F97316; } .icon-feiliao { color: #F59E0B; }
 .icon-Scissors { color: #10B981; } .icon-penzai { color: #22C55E; } .icon-qingkong { color: #EF4444; }
 .icon-lichengbei { color: #F59E0B; } .icon-qita { color: #6B7280; }

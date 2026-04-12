@@ -7,35 +7,35 @@
 
   <scroll-view scroll-y class="scroll-content">
     
-    <!-- 图片上传/拖动预览框 -->
-    <view class="photo-upload-box {{tempImagePath ? 'has-img' : ''}}" style="{{boxH ? 'height:' + boxH + 'px;' : ''}}">
-      <view wx:if="{{!tempImagePath}}" class="upload-placeholder" bindtap="chooseImage">
-        <text class="icon icon-image"></text>
-        <text class="upload-title">点击上传植物照片</text>
-        <text class="upload-subtitle">选一张它最好看的瞬间</text>
-      </view>
-      <block wx:else>
-        <movable-area style="width:100%;height:{{boxH}}px;overflow:hidden;">
-          <movable-view
-            direction="all"
-            x="{{imgX}}" y="{{imgY}}"
-            bindchange="onImgMove"
-            scale
-            bindscale="onImgScale"
-            style="width:{{imgW}}px;height:{{imgH}}px;"
-          >
-            <image src="{{tempImagePath}}" mode="scaleToFill" style="width:{{imgW}}px;height:{{imgH}}px;display:block;"></image>
-          </movable-view>
-        </movable-area>
-        <view class="crop-hint-bar">
-          <text class="crop-hint-text">拖动/双指缩放调整显示区域</text>
-          <view class="crop-reselect" catchtap="chooseImage">重新选择</view>
+    <!-- 多图片上传区域 -->
+    <view class="section-title">植物照片 ({{tempImagePaths.length}}/{{maxImageCount}})</view>
+    <view class="image-upload-container">
+      <scroll-view scroll-x class="image-scroll-view">
+        <view class="image-list">
+          <!-- 已选择的图片 -->
+          <view class="image-item {{selectedIndex === index ? 'selected' : ''}}" wx:for="{{tempImagePaths}}" wx:key="index" bindtap="onImageTap" data-index="{{index}}">
+            <image src="{{item}}" mode="aspectFill" class="image-preview" />
+            <!-- 封面标记 -->
+            <view wx:if="{{index === 0}}" class="cover-badge">封面</view>
+            <!-- 删除按钮 -->
+            <view class="delete-btn" catchtap="deleteImage" data-index="{{index}}">
+              <text class="icon icon-delete"></text>
+            </view>
+          </view>
+          
+          <!-- 添加按钮 -->
+          <view wx:if="{{tempImagePaths.length < maxImageCount}}" class="add-image-btn" bindtap="chooseImages">
+            <text class="icon icon-plus"></text>
+            <text class="add-text">添加照片</text>
+            <text class="add-hint">还能添加{{maxImageCount - tempImagePaths.length}}张</text>
+          </view>
         </view>
-      </block>
+      </scroll-view>
+      <view class="upload-tip">
+        <text class="icon icon-info"></text>
+        <text>点击两张图片可交换位置，第一张照片为封面</text>
+      </view>
     </view>
-
-    <!-- 隐藏 canvas 用于截图 - 使用 type="2d" 支持新 API -->
-    <canvas type="2d" id="cropCanvas" class="hidden-canvas" style="width:{{boxW}}px;height:{{boxH}}px;position:fixed;top:-9999px;left:-9999px;"></canvas>
 
     <view class="section-title">基础信息</view>
     <view class="info-group">

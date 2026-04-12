@@ -13,7 +13,7 @@ Page({
       { label: '换盆', value: 'repot', icon: 'icon-penzai', selected: false },
       { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false },
       { label: '里程碑', value: 'milestone', icon: 'icon-lichengbei', selected: false },
-      { label: '其他', value: 'other', icon: 'icon-qita', selected: false }
+      { label: '自定义', value: 'custom', icon: 'icon-qita', selected: false, isCustom: true }
     ],
     note: '',
     submitting: false,
@@ -119,9 +119,35 @@ Page({
   },
 
   toggleAction(e) {
+    const { index } = e.currentTarget.dataset;
     const actions = this.data.actions;
-    actions[e.currentTarget.dataset.index].selected = !actions[e.currentTarget.dataset.index].selected;
+    // 所有标签都可以点击切换选中状态
+    actions[index].selected = !actions[index].selected;
     this.setData({ actions });
+  },
+
+  // 长按自定义标签
+  longPressAction(e) {
+    const { index } = e.currentTarget.dataset;
+    const actions = this.data.actions;
+    const action = actions[index];
+
+    if (action.isCustom) {
+      wx.showModal({
+        title: '自定义操作',
+        editable: true,
+        placeholderText: '请输入操作名称',
+        content: '',
+        success: (res) => {
+          if (res.confirm && res.content && res.content.trim()) {
+            const customName = res.content.trim();
+            // 只修改标签名，不自动选中
+            actions[index].label = customName;
+            this.setData({ actions });
+          }
+        }
+      });
+    }
   },
 
   onNoteInput(e) { this.setData({ note: e.detail.value }); },
@@ -159,8 +185,13 @@ Page({
       await Promise.all(tasks);
       wx.hideLoading();
       wx.showToast({ title: `已记录 ${selectedIds.length} 株`, icon: 'success' });
-      // 重置选中状态和备注，actions 恢复默认只选浇水
-      const resetActions = this.data.actions.map(a => ({ ...a, selected: false }));
+      // 重置选中状态和备注，actions 恢复默认，自定义标签恢复原始文字
+      const resetActions = this.data.actions.map(a => {
+        if (a.isCustom) {
+          return { ...a, label: '自定义', selected: false };
+        }
+        return { ...a, selected: false };
+      });
       const resetPlantList = this.data.plantList.map(p => ({ ...p, _selected: false }));
       this.setData({ selectedIds: [], note: '', submitting: false, actions: resetActions, plantList: resetPlantList, displayList: resetPlantList, activeTag: '', filterSpecies: '', filterLocation: '', batchSearchKey: '' });
     } catch(err) {

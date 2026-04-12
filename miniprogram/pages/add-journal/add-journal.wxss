@@ -119,6 +119,18 @@ page {
 
 .action-icon { font-size: 52rpx; margin-bottom: 10rpx; }
 .action-label { font-size: 28rpx; color: #1E3B28; font-weight: 700; }
+.custom-hint {
+  position: absolute;
+  right: 8rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 19rpx;
+  color: #080808;
+  opacity: 0.6;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  line-height: 1.2;
+}
 
 /* 记录页图标颜色 */
 .icon-Water { color: #3B82F6; }

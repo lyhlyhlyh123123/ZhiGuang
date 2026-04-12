@@ -75,5 +75,36 @@ App({
     });
 
     return this.loginPromise;
+  },
+
+  /**
+   * 清理登录状态（退出登录时调用）
+   */
+  clearLoginState: function() {
+    this.loginPromise = null;
+    this.globalData.openid = null;
+    this.globalData.userInfo = null;
+    wx.removeStorageSync('openid');
+    wx.removeStorageSync('userInfo');
+  },
+
+  /**
+   * 全局错误处理
+   */
+  onError: function(err) {
+    console.error('【植光】全局错误:', err);
+    wx.showToast({ title: '出错了，请重试', icon: 'none' });
+  },
+
+  /**
+   * 页面未找到处理
+   */
+  onPageNotFound: function() {
+    wx.redirectTo({
+      url: '/pages/index/index',
+      fail: () => {
+        wx.switchTab({ url: '/pages/index/index' });
+      }
+    });
   }
 });

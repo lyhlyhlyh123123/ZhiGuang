@@ -19,12 +19,13 @@ Page({
   },
 
   onShow() {
-    // 节流：10秒内不重复加载，但切换月份后会重置
-    const now = Date.now();
-    if (!this._lastLoadTime || now - this._lastLoadTime > 10000) {
-      this._lastLoadTime = now;
-      this.loadMonthData();
-    }
+    // ✅ 修复：完全清除缓存，确保数据最新（避免显示过期数据）
+    this._dayCache = null;
+    this._monthCache = null;
+    
+    // 重新加载月度统计
+    this.loadMonthData();
+    
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
     }
@@ -128,8 +129,12 @@ Page({
     const { date } = e.currentTarget.dataset;
     if (!date) return;
     
-    // 性能优化：缓存日期数据
-    if (this._dayCache && this._dayCache[date]) {
+    // 性能优化：缓存日期数据（但今天的数据不使用缓存，确保实时性）
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const isToday = date === todayStr;
+    
+    if (!isToday && this._dayCache && this._dayCache[date]) {
       this.setData({
         selectedDate: date,
         dayJournals: this._dayCache[date]
@@ -187,5 +192,12 @@ Page({
   previewImg(e) {
     const { src, list } = e.currentTarget.dataset;
     wx.previewImage({ current: src, urls: list });
+  },
+
+  // ✅ 修复：添加页面卸载时清理缓存，防止内存泄漏
+  onUnload() {
+    this._plantCache = null;
+    this._dayCache = null;
+    this._monthCache = null;
   }
 });

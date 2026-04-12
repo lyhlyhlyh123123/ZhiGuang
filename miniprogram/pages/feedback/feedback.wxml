@@ -10,12 +10,14 @@
     <text class="hero-sub">记录每一寸破土而出的生命</text>
 
     <view class="update-card">
-      <text class="update-title">✨ 本次更新 (2026-04-10)</text>
+      <text class="update-title">✨ 本次更新 (2026-04-12)</text>
       <view class="update-list">
-        <view class="update-item"><text class="update-tag">1</text><text class="update-desc">植物头像支持拖拽缩放裁剪</text></view>
-        <view class="update-item"><text class="update-tag">2</text><text class="update-desc">到家日期改为选填项</text></view>
+        <view class="update-item"><text class="update-tag">1</text><text class="update-desc">可添加植物详情页可添加多张植物图片</text></view>
+        <view class="update-item"><text class="update-tag">2</text><text class="update-desc">到家日期改为选填项，新增来源、备注属性</text></view>
         <view class="update-item"><text class="update-tag">3</text><text class="update-desc">批量操作支持 / 联合搜索标签</text></view>
         <view class="update-item"><text class="update-tag">4</text><text class="update-desc">支持无限添加植物</text></view>
+        <view class="update-item"><text class="update-tag">5</text><text class="update-desc">新增标签</text></view>
+        <view class="update-item"><text class="update-tag">注</text><text class="update-desc">目前图片的裁剪显示还有问题，后续会进行完善！</text></view>
       </view>
     </view>
 
@@ -31,11 +33,6 @@
       <text class="label">反馈内容</text>
       <textarea class="textarea" placeholder="遇到了什么问题？有什么建议？" value="{{content}}" bindinput="onContentInput" maxlength="500"></textarea>
       <text class="word-count">{{content.length}}/500</text>
-    </view>
-
-    <view class="card">
-      <text class="label">联系方式（可选）</text>
-      <input class="input" placeholder="微信号或邮箱，方便回复你" value="{{contact}}" bindinput="onContactInput" />
     </view>
 
     <button class="submit-btn {{content.length > 0 ? 'active' : ''}}" bindtap="submit" disabled="{{submitting}}">

@@ -17,8 +17,32 @@
 
   <!-- 正式内容 -->
   <block wx:else>
+  <!-- 轮播图区域 -->
   <view class="hero-section">
-    <image class="hero-bg" src="{{plantInfo.photoFileID}}" mode="aspectFill" wx:if="{{plantInfo}}"></image>
+    <swiper
+      class="plant-swiper"
+      indicator-dots="{{plantPhotos.length > 1}}"
+      indicator-color="rgba(255,255,255,0.5)"
+      indicator-active-color="#22C55E"
+      autoplay="{{false}}"
+      circular="{{plantPhotos.length > 1}}"
+      wx:if="{{plantPhotos.length > 0}}"
+    >
+      <swiper-item wx:for="{{plantPhotos}}" wx:key="*this">
+        <image
+          class="hero-bg"
+          src="{{item}}"
+          mode="aspectFill"
+          bindtap="previewImage"
+          data-current="{{item}}"
+        />
+      </swiper-item>
+    </swiper>
+    <!-- 图片计数器 -->
+    <view class="photo-counter" wx:if="{{plantPhotos.length > 1}}">
+      <text class="icon icon-image"></text>
+      <text>{{plantPhotos.length}}张</text>
+    </view>
   </view>
 
   <view class="content-card">
@@ -88,7 +112,7 @@
         <!-- 第3页：备注 -->
         <swiper-item>
           <view class="swiper-card">
-            <view class="card-single">
+            <view class="card-single" bindtap="showFullRemark">
               <text class="single-icon iconfont icon-beizhu"></text>
               <text class="single-label">备注</text>
               <text class="single-value">{{plantInfo.remark || '无'}}</text>
@@ -170,11 +194,11 @@
   <view class="bottom-action-bar" wx:if="{{isOwner}}">
     <button class="btn-record" bindtap="openJournalPage">
       <text class="btn-icon icon icon-jilu"></text>
-      <text class="btn-text">记录成长</text>
+      <text class="btn-text">记录植物成长</text>
     </button>
     <button class="btn-share" open-type="share">
       <text class="btn-icon icon icon-share"></text>
-      <text class="btn-text">分享植物卡片</text>
+      <text class="btn-text">分享植物获赞</text>
     </button>
   </view>
 

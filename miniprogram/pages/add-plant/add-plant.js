@@ -1,5 +1,6 @@
 // pages/add-plant/add-plant.js
 const db = wx.cloud.database();
+const { uploadImages } = require('../../utils/imageHelper.js');
 
 Page({
   data: {
@@ -9,25 +10,14 @@ Page({
     source: '', // 来源（选填）
     remark: '', // 备注（选填）
     adoptDate: '',
-    tempImagePath: '',
+    tempImagePaths: [], // 改为数组，支持多图
     waterInterval: 7,
-    imgX: 0,      // 图片拖动偏移 X
-    imgY: 0,      // 图片拖动偏移 Y
-    imgScale: 1,  // 图片缩放比例
-    imgNaturalWidth: 0,
-    imgNaturalHeight: 0,
-    imgW: 0,
-    imgH: 0,
-    showCropPreview: false,
-    boxW: 0,
-    boxH: 0,
+    maxImageCount: 9, // 最多9张图片
+    selectedIndex: -1, // 选中的图片索引（用于交换）
   },
 
   onLoad() {
-    const info = wx.getSystemInfoSync();
-    const boxW = info.windowWidth - 48; // 减去左右 padding（各24px）
-    const boxH = Math.round(boxW * 3 / 4);
-    this.setData({ boxW, boxH });
+    // 移除裁剪相关的初始化
   },
 
   onDateChange(e) {
@@ -58,166 +48,77 @@ Page({
     this.setData({ remark: e.detail.value });
   },
 
-  chooseImage() {
+  // 选择图片（支持多选）
+  chooseImages() {
+    const remaining = this.data.maxImageCount - this.data.tempImagePaths.length;
+    
+    if (remaining <= 0) {
+      wx.showToast({ title: `最多只能上传${this.data.maxImageCount}张图片`, icon: 'none' });
+      return;
+    }
+
     wx.chooseMedia({
-      count: 1,
+      count: remaining,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
+      sizeType: ['compressed'], // 使用压缩图，减少上传时间
     }).then(res => {
-      const path = res.tempFiles[0].tempFilePath;
-      // 获取图片原始尺寸，计算初始缩放让图片填满框
-      wx.getImageInfo({
-        src: path,
-        success: info => {
-          const { boxW, boxH } = this.data;
-          const scaleW = boxW / info.width;
-          const scaleH = boxH / info.height;
-          const scale = Math.max(scaleW, scaleH);
-          
-          const imgW = Math.round(info.width * scale);
-          const imgH = Math.round(info.height * scale);
-          
-          // 计算居中偏移：如果图片比容器大，让图片居中显示
-          const imgX = imgW > boxW ? (boxW - imgW) / 2 : 0;
-          const imgY = imgH > boxH ? (boxH - imgH) / 2 : 0;
-          
-          this.setData({
-            tempImagePath: path,
-            imgX,
-            imgY,
-            imgScale: scale,
-            imgNaturalWidth: info.width,
-            imgNaturalHeight: info.height,
-            imgW,
-            imgH,
-            showCropPreview: true
-          });
-        },
-        fail: (err) => {
-          console.error('【植光】获取图片信息失败:', err);
-          wx.showToast({ title: '图片加载失败，请重试', icon: 'none' });
-        }
-      });
+      const newPaths = res.tempFiles.map(file => file.tempFilePath);
+      const allPaths = [...this.data.tempImagePaths, ...newPaths];
+      this.setData({ tempImagePaths: allPaths });
     }).catch(err => {
-      console.error('选择照片失败', err);
+      console.error('【植光】选择照片失败:', err);
     });
   },
 
-  onImgMove(e) {
-    // 节流优化：避免频繁 setData
-    if (this._moveTimer) return;
-    this._moveTimer = setTimeout(() => {
-      this.setData({ imgX: e.detail.x, imgY: e.detail.y });
-      this._moveTimer = null;
-    }, 16); // 60fps
-  },
-
-  onImgScale(e) {
-    // 节流优化：避免频繁 setData
-    if (this._scaleTimer) return;
-    this._scaleTimer = setTimeout(() => {
-      const newScale = this.data.imgScale * e.detail.scale;
-      this.setData({
-        imgScale: newScale,
-        imgW: Math.round(this.data.imgNaturalWidth * newScale),
-        imgH: Math.round(this.data.imgNaturalHeight * newScale)
-      });
-      this._scaleTimer = null;
-    }, 16); // 60fps
-  },
-
-  // ✅ 修复：支持 Canvas 2D API，向后兼容旧版 API
-  async confirmCrop() {
-    const { tempImagePath, imgX, imgY, imgScale, imgNaturalWidth, imgNaturalHeight, boxW, boxH } = this.data;
-    const dpr = wx.getSystemInfoSync().pixelRatio;
-
-    return new Promise((resolve, reject) => {
-      // 优先使用 Canvas 2D API
-      const query = wx.createSelectorQuery().in(this);
-      query.select('#cropCanvas')
-        .fields({ node: true, size: true })
-        .exec((res) => {
-          if (res && res[0] && res[0].node) {
-            // 使用新版 Canvas 2D API
-            this._cropWithCanvas2D(res[0].node, {
-              tempImagePath, imgX, imgY, imgScale,
-              imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr
-            }).then(resolve).catch(() => {
-              // 降级到旧版 API
-              this._cropWithOldCanvas({
-                tempImagePath, imgX, imgY, imgScale,
-                imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr
-              }).then(resolve).catch(reject);
-            });
-          } else {
-            // 降级到旧版 API
-            this._cropWithOldCanvas({
-              tempImagePath, imgX, imgY, imgScale,
-              imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr
-            }).then(resolve).catch(reject);
-          }
-        });
-    });
-  },
-
-  // Canvas 2D API 实现
-  async _cropWithCanvas2D(canvas, params) {
-    const { tempImagePath, imgX, imgY, imgScale, imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr } = params;
+  // 点击图片进行交换
+  onImageTap(e) {
+    const { index } = e.currentTarget.dataset;
     
-    return new Promise((resolve, reject) => {
-      canvas.width = boxW * dpr;
-      canvas.height = boxH * dpr;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(dpr, dpr);
-      
-      const img = canvas.createImage();
-      img.onload = () => {
-        ctx.drawImage(img, imgX, imgY, imgNaturalWidth * imgScale, imgNaturalHeight * imgScale);
-        
-        wx.canvasToTempFilePath({
-          canvas,
-          x: 0, y: 0,
-          width: boxW, height: boxH,
-          destWidth: boxW * dpr,
-          destHeight: boxH * dpr,
-          success: res => {
-            this.setData({ tempImagePath: res.tempFilePath, showCropPreview: false });
-            resolve(res.tempFilePath);
-          },
-          fail: reject
-        }, this);
-      };
-      img.onerror = reject;
-      img.src = tempImagePath;
+    // 如果没有选中图片，选中当前图片
+    if (this.data.selectedIndex === -1) {
+      this.setData({ selectedIndex: index });
+      wx.vibrateShort({ type: 'light' });
+      return;
+    }
+    
+    // 如果点击同一张图片，取消选中
+    if (this.data.selectedIndex === index) {
+      this.setData({ selectedIndex: -1 });
+      return;
+    }
+    
+    // 交换两张图片
+    const paths = [...this.data.tempImagePaths];
+    const temp = paths[this.data.selectedIndex];
+    paths[this.data.selectedIndex] = paths[index];
+    paths[index] = temp;
+    
+    this.setData({
+      tempImagePaths: paths,
+      selectedIndex: -1 // 交换后取消选中
+    });
+    
+    wx.vibrateShort({ type: 'heavy' });
+  },
+
+  // 删除某张图片
+  deleteImage(e) {
+    const { index } = e.currentTarget.dataset;
+    const paths = [...this.data.tempImagePaths];
+    paths.splice(index, 1);
+    this.setData({
+      tempImagePaths: paths,
+      selectedIndex: -1 // 删除后取消选中
     });
   },
 
-  // 旧版 Canvas API 实现（兼容）
-  async _cropWithOldCanvas(params) {
-    const { tempImagePath, imgX, imgY, imgScale, imgNaturalWidth, imgNaturalHeight, boxW, boxH, dpr } = params;
-    
-    return new Promise((resolve, reject) => {
-      const ctx = wx.createCanvasContext('cropCanvas', this);
-      ctx.drawImage(
-        tempImagePath,
-        imgX, imgY,
-        imgNaturalWidth * imgScale,
-        imgNaturalHeight * imgScale
-      );
-      ctx.draw(false, () => {
-        wx.canvasToTempFilePath({
-          canvasId: 'cropCanvas',
-          x: 0, y: 0,
-          width: boxW, height: boxH,
-          destWidth: boxW * dpr,
-          destHeight: boxH * dpr,
-          success: res => {
-            this.setData({ tempImagePath: res.tempFilePath, showCropPreview: false });
-            resolve(res.tempFilePath);
-          },
-          fail: reject
-        }, this);
-      });
+  // 预览图片（长按）
+  previewImage(e) {
+    const { url } = e.currentTarget.dataset;
+    wx.previewImage({
+      current: url,
+      urls: this.data.tempImagePaths
     });
   },
 
@@ -225,41 +126,55 @@ Page({
     if (this._submitting) return;
     this._submitting = true;
 
-    const { nickname, species, location, source, remark, adoptDate, tempImagePath, waterInterval } = this.data;
+    const { nickname, species, location, source, remark, adoptDate, tempImagePaths, waterInterval } = this.data;
 
-    if (!nickname || !species || !location || !tempImagePath) {
+    // 验证必填字段
+    if (!nickname || !species || !location) {
       this._submitting = false;
-      wx.showToast({ title: '请填写昵称、品种、位置并上传照片', icon: 'none' });
+      wx.showToast({ title: '请填写昵称、品种和位置', icon: 'none' });
       return;
     }
 
-    wx.showLoading({ title: '保存中...' });
+    if (tempImagePaths.length === 0) {
+      this._submitting = false;
+      wx.showToast({ title: '请至少上传一张照片', icon: 'none' });
+      return;
+    }
+
+    wx.showLoading({ title: '上传中...' });
 
     try {
-      // 如果还在预览拖动模式，先执行裁剪
-      if (this.data.showCropPreview) {
-        await this.confirmCrop();
+      // 批量上传图片到云存储
+      const uploadResult = await uploadImages(tempImagePaths, 'plant-photos', true);
+      const photoList = uploadResult.success;
+
+      // ✅ 修复：如果有图片上传失败，提示用户
+      if (uploadResult.failed > 0) {
+        wx.showToast({
+          title: `${uploadResult.failed}张图片上传失败`,
+          icon: 'none',
+          duration: 2000
+        });
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
-      const finalPath = this.data.tempImagePath;
-      const cloudPath = `plant-photos/${Date.now()}-${Math.floor(Math.random()*1000)}.jpg`;
-      const uploadRes = await wx.cloud.uploadFile({ cloudPath, filePath: finalPath });
-      const fileID = uploadRes.fileID;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
+      // 保存到数据库
       await db.collection('plants').add({
         data: {
           nickname,
           species,
           location,
-          source: source || '', // 来源（选填）
-          remark: remark || '', // 备注（选填）
+          source: source || '',
+          remark: remark || '',
           adoptDate: adoptDate || todayStr,
-          photoFileID: fileID,
+          photoList: photoList,           // 新增：图片数组
+          photoFileID: photoList[0] || '', // 兼容：第一张作为封面
           waterInterval,
-          lastWaterDate: today, // 以今天为起始浇水日期
+          lastWaterDate: today,
           createTime: db.serverDate(),
           updateTime: db.serverDate()
         }
@@ -268,7 +183,6 @@ Page({
       wx.hideLoading();
       this._submitting = false;
       wx.showToast({ title: '添加成功！', icon: 'success', duration: 1200 });
-      // 缩短延迟时间，优化用户体验
       setTimeout(() => wx.navigateBack({ delta: 1 }), 1200);
 
     } catch (err) {
@@ -295,15 +209,24 @@ Page({
     }
   },
 
-  // ✅ 修复：页面卸载时清理定时器，防止内存泄漏
+  // ✅ 修复：添加页面卸载时清理
   onUnload() {
-    if (this._moveTimer) {
-      clearTimeout(this._moveTimer);
-      this._moveTimer = null;
+    this._submitting = false;
+  },
+
+  goBack() {
+    wx.navigateBack({ delta: 1 });
+  },
+
+  minusInterval() {
+    if (this.data.waterInterval > 1) {
+      this.setData({ waterInterval: this.data.waterInterval - 1 });
     }
-    if (this._scaleTimer) {
-      clearTimeout(this._scaleTimer);
-      this._scaleTimer = null;
+  },
+
+  addInterval() {
+    if (this.data.waterInterval < 30) {
+      this.setData({ waterInterval: this.data.waterInterval + 1 });
     }
   }
 });

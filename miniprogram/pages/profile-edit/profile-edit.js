@@ -85,11 +85,8 @@ Page({
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          app.globalData.userInfo = null;
-          app.globalData.openid = null;
-          app.loginPromise = null; // 重置登录 Promise，下次重新走登录流程
-          wx.removeStorageSync('userInfo');
-          wx.removeStorageSync('openid');
+          // ✅ 使用 app 统一的清理方法，确保状态一致性
+          app.clearLoginState();
           wx.showToast({ title: '已退出', icon: 'success' });
           setTimeout(() => wx.navigateBack(), 1000);
         }

@@ -1,5 +1,6 @@
 // pages/index/index.js
 const db = wx.cloud.database();
+const { getCoverPhoto, getPlantPhotos } = require('../../utils/imageHelper.js');
 const PLANT_QUERY_LIMIT = 100; // 单次查询植物上限
 
 Page({
@@ -144,6 +145,7 @@ Page({
 
           const allPlants = rawPlants.map(p => ({
             ...p,
+            photoFileID: getCoverPhoto(p), // 统一使用封面图
             waterCountdown: this.calcWaterCountdown(p)
           }));
 
@@ -330,11 +332,22 @@ Page({
     wx.navigateTo({ url: `/pages/plant-detail/plant-detail?id=${plantId}` });
   },
 
-  // ✅ 修复：页面卸载时清理定时器，防止内存泄漏
+  // ✅ 修复：页面隐藏时清理定时器，防止内存泄漏
+  onHide() {
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
+  },
+
+  // ✅ 修复：页面卸载时清理定时器和缓存，防止内存泄漏
   onUnload() {
     if (this._searchTimer) {
       clearTimeout(this._searchTimer);
       this._searchTimer = null;
     }
+    // 清理缓存
+    this._cachedFilteredPlants = null;
+    this._plantCache = null;
   }
 });

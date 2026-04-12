@@ -71,7 +71,6 @@ page { background: #F0FDF4; font-family: -apple-system, sans-serif; }
 .label { font-size: 28rpx; font-weight: 600; color: #374151; display: block; margin-bottom: 16rpx; }
 .textarea { width: 100%; min-height: 180rpx; font-size: 28rpx; color: #374151; line-height: 1.6; }
 .word-count { display: block; text-align: right; font-size: 22rpx; color: #D1D5DB; margin-top: 8rpx; }
-.input { width: 100%; height: 72rpx; font-size: 28rpx; color: #374151; }
 
 .submit-btn { width: 100% !important; height: 100rpx; background: #E5E7EB; color: #9CA3AF; border-radius: 50rpx; font-size: 32rpx; font-weight: 700; margin-top: 8rpx; }
 .submit-btn.active { background: linear-gradient(135deg, #22C55E, #16A34A); color: #FFFFFF; box-shadow: 0 12rpx 32rpx rgba(34,197,94,0.3); }

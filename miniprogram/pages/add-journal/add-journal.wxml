@@ -26,10 +26,12 @@
           wx:key="value"
           wx:if="{{idx < 4}}"
           bindtap="toggleAction"
+          bindlongpress="longPressAction"
           data-index="{{idx}}"
         >
           <text class="action-icon icon {{item.icon}}"></text>
           <text class="action-label">{{item.label}}</text>
+          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
           <view class="check-badge" wx:if="{{item.selected}}">
             <text class="icon icon-plus" style="font-size: 16rpx; color: #fff;"></text>
           </view>
@@ -46,10 +48,12 @@
           wx:key="value"
           wx:if="{{idx >= 4}}"
           bindtap="toggleAction"
+          bindlongpress="longPressAction"
           data-index="{{idx}}"
         >
           <text class="action-icon icon {{item.icon}}"></text>
           <text class="action-label">{{item.label}}</text>
+          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
           <view class="check-badge" wx:if="{{item.selected}}">
             <text class="icon icon-plus" style="font-size: 16rpx; color: #fff;"></text>
           </view>
