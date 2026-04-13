@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "植光",
-  "usingComponents": {}
+  "usingComponents": {},
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

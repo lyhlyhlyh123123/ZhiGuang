@@ -24,7 +24,19 @@ Page({
   },
 
   onShow() {
-    this.fetchPlants();
+    // ✅ 简化：直接在 onShow 检查全局刷新标志
+    const app = getApp();
+    const needRefresh = this._needRefresh || app.globalData.needRefreshIndex;
+    
+    if (needRefresh) {
+      console.log('【植光】onShow: 检测到刷新标志，执行强制刷新');
+      this._needRefresh = false;
+      app.globalData.needRefreshIndex = false;
+      this.fetchPlants(true); // 强制刷新
+    } else {
+      // 正常显示时的刷新逻辑（受节流控制）
+      this.fetchPlants();
+    }
     const cachedUserInfo = wx.getStorageSync('userInfo');
     if (cachedUserInfo && cachedUserInfo.nickName) {
       this.setData({ userInfo: cachedUserInfo });
@@ -33,6 +45,17 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 });
     }
+  },
+
+  // ✨ 新增：下拉刷新
+  onPullDownRefresh() {
+    console.log('【植光】用户触发下拉刷新');
+    this._needRefresh = true; // 强制刷新
+    this.fetchPlants(true);
+    // 刷新完成后停止下拉动画
+    setTimeout(() => {
+      wx.stopPullDownRefresh();
+    }, 1000);
   },
   // 设置当前日期
   setCurrentDate() {
@@ -109,15 +132,25 @@ Page({
   },
 
   // 去云端拉取植物列表的方法
-  fetchPlants() {
+  fetchPlants(forceRefresh = false) {
     // ✅ 修复：添加请求锁，防止竞态条件
     if (this._fetching) return;
     
-    // 节流：1分钟内不重复请求，但从子页面返回时强制刷新
+    // 节流：30秒内不重复请求，但允许强制刷新或从子页面返回时刷新
     const now = Date.now();
-    if (!this._needRefresh && this._lastFetchTime && now - this._lastFetchTime < 60000) {
+    if (!forceRefresh && !this._needRefresh && this._lastFetchTime && now - this._lastFetchTime < 30000) {
+      console.log('【植光】节流保护：距上次刷新未满30秒');
       return;
     }
+    
+    // ✅ 强制刷新时清空缓存，确保显示最新数据
+    if (forceRefresh) {
+      console.log('【植光】强制刷新，清空缓存');
+      this._cachedFilteredPlants = null;
+      this._lastSearchKey = null;
+      this._lastAllPlantsCount = null;
+    }
+    
     this._needRefresh = false;
     this._lastFetchTime = now;
     this._fetching = true;

@@ -14,7 +14,10 @@ Page({
     loading: true,
     likeCount: 0,
     hasLiked: false,
-    plantPhotos: [] // 植物图片数组
+    plantPhotos: [], // 植物图片数组
+    currentPhotoIndex: 0, // 当前轮播图索引
+    swiperHeight: 1000, // 动态轮播高度,默认1000rpx
+    imageHeights: {} // 存储每张图片计算后的高度
   },
 
   onLoad(options) {
@@ -267,12 +270,82 @@ Page({
     this.setData({ journalList });
   },
 
+  // 轮播图切换事件
+  onSwiperChange(e) {
+    this.setData({
+      currentPhotoIndex: e.detail.current
+    });
+  },
+
   // 预览植物图片
   previewImage(e) {
     const { current } = e.currentTarget.dataset;
     wx.previewImage({
       current,
       urls: this.data.plantPhotos
+    });
+  },
+
+  // 图片加载完成 - 小红书逻辑: 全宽自适应 + 高度受限80vh
+  onImageLoad(e) {
+    const { width, height } = e.detail;
+    const index = e.currentTarget.dataset.index;
+    
+    if (!width || !height) return;
+    
+    // 获取系统信息
+    const systemInfo = wx.getSystemInfoSync();
+    const screenWidth = systemInfo.windowWidth;
+    const screenHeight = systemInfo.windowHeight;
+    
+    // 计算图片宽高比
+    const ratio = height / width;
+    
+    // 全宽自适应: 容器宽度 = 屏幕宽度
+    // 显示高度 = 容器宽度 × 宽高比
+    let displayHeight = screenWidth * ratio;
+    
+    // 高度限制: 最大80vh
+    const maxHeight = screenHeight * 0.8;
+    if (displayHeight > maxHeight) {
+      displayHeight = maxHeight;
+    }
+    
+    // 最小高度限制: 40vh,避免过矮
+    const minHeight = screenHeight * 0.4;
+    if (displayHeight < minHeight) {
+      displayHeight = minHeight;
+    }
+    
+    // 转换为rpx (750rpx = screenWidth px)
+    const displayHeightRpx = (displayHeight / screenWidth) * 750;
+    
+    // 存储每张图片的计算高度
+    const imageHeights = this.data.imageHeights;
+    imageHeights[index] = displayHeightRpx;
+    
+    // 更新当前轮播图高度(显示第一张图或当前图)
+    if (index === this.data.currentPhotoIndex || index === 0) {
+      this.setData({
+        swiperHeight: displayHeightRpx,
+        imageHeights
+      });
+    } else {
+      this.setData({ imageHeights });
+    }
+  },
+
+  // 轮播切换时更新高度
+  onSwiperChange(e) {
+    const currentIndex = e.detail.current;
+    const imageHeights = this.data.imageHeights;
+    
+    // 如果当前图片已计算过高度,使用缓存
+    const currentHeight = imageHeights[currentIndex] || this.data.swiperHeight;
+    
+    this.setData({
+      currentPhotoIndex: currentIndex,
+      swiperHeight: currentHeight
     });
   },
 
@@ -289,6 +362,10 @@ Page({
   },
 
   goToEditPlant() {
+    // ✅ 设置全局刷新标志，编辑后返回首页时刷新
+    const app = getApp();
+    app.globalData.needRefreshIndex = true;
+    
     wx.navigateTo({
       url: `/pages/edit-plant/edit-plant?id=${this.data.plantId}`
     });
@@ -458,7 +535,6 @@ Page({
       }
     }
     
-    console.log('【植光】点赞操作 - plantId:', plantId, 'hasLiked:', hasLiked, 'userId:', userId);
     wx.showLoading({ title: hasLiked ? '取消中...' : '点赞中...' });
 
     // 调用云函数处理点赞
@@ -471,19 +547,16 @@ Page({
     }).then(res => {
       wx.hideLoading();
       
-      console.log('【植光】云函数返回结果:', res);
-      
       if (!res.result) {
-        console.error('【植光】云函数返回结果为空');
-        wx.showToast({ title: '云函数调用失败', icon: 'none' });
+        wx.showToast({ title: '操作失败', icon: 'none' });
         return;
       }
       
       const { success, hasLiked: newHasLiked, likeCount: newLikeCount, error } = res.result;
       
       if (!success) {
-        console.error('【植光】点赞失败 - 错误:', error);
-        wx.showToast({ title: `操作失败: ${error || '未知错误'}`, icon: 'none', duration: 3000 });
+        console.error('【植光】点赞失败:', error);
+        wx.showToast({ title: '操作失败，请重试', icon: 'none' });
         return;
       }
 
@@ -493,8 +566,6 @@ Page({
         likeCount: newLikeCount
       });
 
-      console.log('【植光】点赞成功 - 新状态:', { hasLiked: newHasLiked, likeCount: newLikeCount });
-
       wx.showToast({
         title: newHasLiked ? '点赞成功 ❤️' : '已取消',
         icon: 'success',
@@ -502,8 +573,8 @@ Page({
       });
     }).catch(err => {
       wx.hideLoading();
-      console.error('【植光】点赞调用失败 - 完整错误:', err);
-      wx.showToast({ title: `调用失败: ${err.errMsg || '请检查网络'}`, icon: 'none', duration: 3000 });
+      console.error('【植光】点赞失败:', err);
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' });
     });
   },
 

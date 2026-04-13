@@ -6,6 +6,12 @@ const db = cloud.database();
 /**
  * 查询当前用户的所有植物（无数量限制）
  * 云函数以管理员身份运行，通过 openid 过滤
+ *
+ * 📌 性能优化建议：
+ * 在云开发控制台为 plants 集合创建以下索引：
+ * 1. 单字段索引：_openid (升序)
+ * 2. 复合索引：_openid (升序) + createTime (降序)
+ * 这将大幅提升查询速度，特别是在数据量大时
  */
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext();
@@ -16,15 +22,24 @@ exports.main = async (event, context) => {
   try {
     const MAX_LIMIT = 100; // 云函数单次最多查 100 条
     let plants = [];
-    let skip = 0;
 
-    // 先查总数
+    // ✅ 优化：先查总数（利用索引）
     const countRes = await db.collection('plants')
       .where({ _openid: openid })
       .count();
     const total = countRes.total;
 
-    // 分批拉取所有数据
+    // 如果数据量不大，直接一次查询
+    if (total <= MAX_LIMIT) {
+      const res = await db.collection('plants')
+        .where({ _openid: openid })
+        .orderBy('createTime', 'desc')
+        .limit(MAX_LIMIT)
+        .get();
+      return { success: true, plants: res.data, total };
+    }
+
+    // ✅ 优化：数据量大时并行查询，提升速度
     const batchCount = Math.ceil(total / MAX_LIMIT);
     const tasks = [];
     for (let i = 0; i < batchCount; i++) {
@@ -41,6 +56,7 @@ exports.main = async (event, context) => {
     const results = await Promise.all(tasks);
     results.forEach(r => { plants = plants.concat(r.data); });
 
+    console.log(`【植光】成功获取 ${plants.length} 条植物数据`);
     return { success: true, plants, total };
   } catch (err) {
     console.error('【植光】getMyPlants 失败:', err);

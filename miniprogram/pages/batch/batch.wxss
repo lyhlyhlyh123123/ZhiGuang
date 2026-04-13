@@ -90,6 +90,7 @@ page { background: #F0FDF4; font-family: -apple-system, sans-serif; }
 .scroll-img {
   width: 100%;
   height: 100%;
+  object-fit: cover; /* 确保图片覆盖容器,居中裁剪 */
 }
 .scroll-name {
   font-size: 24rpx; font-weight: 700; color: #1E3B28;

@@ -10,19 +10,20 @@
     <text class="hero-sub">记录每一寸破土而出的生命</text>
 
     <view class="update-card">
-      <text class="update-title">✨ 本次更新 (2026-04-12)</text>
+      <text class="update-title">✨ 本次更新 (2026-04-13)</text>
       <view class="update-list">
         <view class="update-item"><text class="update-tag">1</text><text class="update-desc">可添加植物详情页可添加多张植物图片</text></view>
         <view class="update-item"><text class="update-tag">2</text><text class="update-desc">到家日期改为选填项，新增来源、备注属性</text></view>
         <view class="update-item"><text class="update-tag">3</text><text class="update-desc">批量操作支持 / 联合搜索标签</text></view>
         <view class="update-item"><text class="update-tag">4</text><text class="update-desc">支持无限添加植物</text></view>
         <view class="update-item"><text class="update-tag">5</text><text class="update-desc">新增标签</text></view>
-        <view class="update-item"><text class="update-tag">注</text><text class="update-desc">目前图片的裁剪显示还有问题，后续会进行完善！</text></view>
+        <view class="update-item"><text class="update-tag">6</text><text class="update-desc">详情页图片可完全显示</text></view>
+        <view class="update-item"><text class="update-tag">7</text><text class="update-desc">可自定义位置和种类标签</text></view>
       </view>
     </view>
 
     <view class="hero-footer">
-      <text class="hero-footer-text">如果植光对你有帮助，欢迎推荐给爱植物的朋友</text>
+      <text class="hero-footer-text">如果植光对你有帮助，欢迎推荐给爱植物的朋友(用户很少求求)</text>
       <button class="share-btn" open-type="share">分享给朋友</button>
     </view>
   </view>

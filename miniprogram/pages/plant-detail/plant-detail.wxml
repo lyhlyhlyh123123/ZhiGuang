@@ -21,27 +21,40 @@
   <view class="hero-section">
     <swiper
       class="plant-swiper"
-      indicator-dots="{{plantPhotos.length > 1}}"
-      indicator-color="rgba(255,255,255,0.5)"
-      indicator-active-color="#22C55E"
+      style="height: {{swiperHeight}}rpx; transition: height 0.3s ease;"
+      indicator-dots="{{false}}"
       autoplay="{{false}}"
       circular="{{plantPhotos.length > 1}}"
       wx:if="{{plantPhotos.length > 0}}"
+      bindchange="onSwiperChange"
+      current="{{currentPhotoIndex}}"
     >
-      <swiper-item wx:for="{{plantPhotos}}" wx:key="*this">
-        <image
-          class="hero-bg"
-          src="{{item}}"
-          mode="aspectFill"
-          bindtap="previewImage"
-          data-current="{{item}}"
-        />
+      <swiper-item wx:for="{{plantPhotos}}" wx:key="*this" wx:for-index="idx">
+        <view class="swiper-image-wrapper">
+          <image
+            class="hero-bg"
+            src="{{item}}"
+            mode="widthFix"
+            bindload="onImageLoad"
+            bindtap="previewImage"
+            data-current="{{item}}"
+            data-index="{{idx}}"
+            lazy-load="{{idx > 2}}"
+          />
+        </view>
       </swiper-item>
     </swiper>
     <!-- 图片计数器 -->
     <view class="photo-counter" wx:if="{{plantPhotos.length > 1}}">
-      <text class="icon icon-image"></text>
-      <text>{{plantPhotos.length}}张</text>
+      <text>{{currentPhotoIndex + 1}}/{{plantPhotos.length}}</text>
+    </view>
+    <!-- 自定义切换点（图片下方） -->
+    <view class="custom-dots" wx:if="{{plantPhotos.length > 1}}">
+      <view
+        wx:for="{{plantPhotos}}"
+        wx:key="index"
+        class="dot {{index === currentPhotoIndex ? 'active' : ''}}"
+      ></view>
     </view>
   </view>
 
@@ -49,49 +62,61 @@
   
     <!-- 植物信息展示区 -->
     <view class="plant-info-section" wx:if="{{plantInfo}}">
+        <!-- 名字和操作按钮行 -->
         <view class="plant-name-row">
-          <view class="name-with-icon">
-            <text class="plant-icon iconfont icon-xiugaimingcheng"></text>
-            <text class="plant-name">{{plantInfo.nickname}}</text>
-            <text class="species-icon iconfont icon-penzai"></text>
-            <text class="plant-latin">{{plantInfo.species}}</text>
-          </view>
+          <text class="plant-name">{{plantInfo.nickname}}</text>
           <view class="name-actions">
-            <!-- 点赞按钮 -->
-            <view class="like-button-mini {{hasLiked ? 'liked' : ''}}" bindtap="toggleLike">
-              <text class="like-icon-mini iconfont icon-icon"></text>
-              <text class="like-count-mini">{{likeCount}}</text>
+            <!-- 点赞按钮（图标右上角显示数字） -->
+            <view class="like-btn-wrapper" bindtap="toggleLike">
+              <view class="action-icon-btn like-btn {{hasLiked ? 'liked' : ''}}">
+                <text class="iconfont icon-icon"></text>
+              </view>
+              <text class="like-badge">{{likeCount}}</text>
             </view>
-            <!-- 编辑和删除按钮（仅所有者可见） -->
-            <view wx:if="{{isOwner}}" class="edit-btn btn-primary" bindtap="goToEditPlant">
-              <text class="edit-text">编辑</text>
+            <!-- 编辑按钮（仅所有者可见，纯图标） -->
+            <view wx:if="{{isOwner}}" class="action-icon-btn edit-btn" bindtap="goToEditPlant">
+              <text class="iconfont icon-edit"></text>
             </view>
-            <view wx:if="{{isOwner}}" class="edit-btn btn-danger" bindtap="confirmDelete">
-              <text class="iconfont icon-delete edit-text"></text>
+            <!-- 删除按钮（仅所有者可见，纯图标） -->
+            <view wx:if="{{isOwner}}" class="action-icon-btn delete-btn" bindtap="confirmDelete">
+              <text class="iconfont icon-delete"></text>
             </view>
           </view>
         </view>
+        <!-- 种类行 -->
+        <view class="plant-species-row">
+          <text class="plant-species">{{plantInfo.species}}</text>
+        </view>
+        <!-- 分隔线 -->
+        <view class="divider-line"></view>
       
-      <!-- 信息卡片轮播 -->
-      <swiper class="info-swiper" indicator-dots indicator-color="rgba(0,0,0,0.3)" indicator-active-color="#22C55E" circular>
+      <!-- 信息卡片轮播（添加箭头包裹容器） -->
+      <view class="info-swiper-wrapper">
+        <swiper class="info-swiper" indicator-dots="{{false}}" circular>
         
         <!-- 第1页：位置、陪伴、亲密度（三列） -->
         <swiper-item>
           <view class="swiper-card">
             <view class="card-three-col">
               <view class="col-item">
-                <text class="col-icon iconfont icon-yunshudidian"></text>
-                <text class="col-label">位置</text>
+                <view class="col-header">
+                  <text class="col-icon iconfont icon-yunshudidian"></text>
+                  <text class="col-label">位置</text>
+                </view>
                 <text class="col-value">{{plantInfo.location || '未设置'}}</text>
               </view>
               <view class="col-item">
-                <text class="col-icon iconfont icon-calendar"></text>
-                <text class="col-label">陪伴</text>
+                <view class="col-header">
+                  <text class="col-icon iconfont icon-calendar"></text>
+                  <text class="col-label">陪伴</text>
+                </view>
                 <text class="col-value">{{adoptDays}}天</text>
               </view>
               <view class="col-item">
-                <text class="col-icon iconfont icon-heart"></text>
-                <text class="col-label">亲密度</text>
+                <view class="col-header">
+                  <text class="col-icon iconfont icon-heart"></text>
+                  <text class="col-label">亲密度</text>
+                </view>
                 <text class="col-value highlight">{{intimacy}}%</text>
               </view>
             </view>
@@ -102,8 +127,10 @@
         <swiper-item>
           <view class="swiper-card">
             <view class="card-single">
-              <text class="single-icon iconfont icon-laiyuan"></text>
-              <text class="single-label">来源</text>
+              <view class="single-header">
+                <text class="single-icon iconfont icon-laiyuan"></text>
+                <text class="single-label">来源</text>
+              </view>
               <text class="single-value">{{plantInfo.source || '无'}}</text>
             </view>
           </view>
@@ -113,31 +140,42 @@
         <swiper-item>
           <view class="swiper-card">
             <view class="card-single" bindtap="showFullRemark">
-              <text class="single-icon iconfont icon-beizhu"></text>
-              <text class="single-label">备注</text>
+              <view class="single-header">
+                <text class="single-icon iconfont icon-beizhu"></text>
+                <text class="single-label">备注</text>
+              </view>
               <text class="single-value">{{plantInfo.remark || '无'}}</text>
             </view>
           </view>
         </swiper-item>
 
       </swiper>
+        <!-- 右侧箭头 -->
+        <text class="swiper-arrow">›</text>
+      </view>
     </view>
 
+    <!-- 养护信息分隔区 -->
+    <view class="care-divider" wx:if="{{plantInfo && plantInfo.waterInterval}}"></view>
+    
+    <!-- 养护标题 -->
+    <view class="care-title" wx:if="{{plantInfo && plantInfo.waterInterval}}">养护指南</view>
+    
     <!-- 养护信息区 -->
     <view class="care-info-section" wx:if="{{plantInfo && plantInfo.waterInterval}}">
-      <view class="care-item">
-        <view class="care-label-row">
-          <text class="care-icon iconfont icon-Water"></text>
-          <text class="care-label">浇水周期</text>
+      <view class="care-card-item">
+        <text class="care-card-icon iconfont icon-Water"></text>
+        <view class="care-card-content">
+          <text class="care-card-label">浇水周期</text>
+          <text class="care-card-value">{{plantInfo.waterInterval}}天/次</text>
         </view>
-        <text class="care-value">{{plantInfo.waterInterval}}天/次</text>
       </view>
-      <view class="care-item">
-        <view class="care-label-row">
-          <text class="care-icon iconfont icon-riqi"></text>
-          <text class="care-label">下次浇水</text>
+      <view class="care-card-item">
+        <text class="care-card-icon iconfont icon-riqi"></text>
+        <view class="care-card-content">
+          <text class="care-card-label">下次浇水</text>
+          <text class="care-card-value {{nextWatering.isOverdue ? 'warn' : ''}}">{{nextWatering.text}}</text>
         </view>
-        <text class="care-value {{nextWatering.isOverdue ? 'warn' : ''}}">{{nextWatering.text}}</text>
       </view>
     </view>
 

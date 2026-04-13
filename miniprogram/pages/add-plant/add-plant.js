@@ -14,10 +14,17 @@ Page({
     waterInterval: 7,
     maxImageCount: 9, // 最多9张图片
     selectedIndex: -1, // 选中的图片索引（用于交换）
+    speciesCategories: [], // 品种类目
+    locationCategories: [], // 位置类目
   },
 
   onLoad() {
-    // 移除裁剪相关的初始化
+    // 加载类目数据
+    const app = getApp();
+    this.setData({
+      speciesCategories: app.globalData.speciesCategories || [],
+      locationCategories: app.globalData.locationCategories || []
+    });
   },
 
   onDateChange(e) {
@@ -36,8 +43,110 @@ Page({
     this.setData({ location: e.detail.value });
   },
 
+  // 选择品种
+  selectSpecies(e) {
+    this.setData({ species: e.currentTarget.dataset.val });
+  },
+
+  // 选择位置
+  selectLocation(e) {
+    this.setData({ location: e.currentTarget.dataset.val });
+  },
+
   quickSetLocation(e) {
     this.setData({ location: e.currentTarget.dataset.val });
+  },
+
+  // 显示添加品种对话框
+  showAddSpeciesDialog() {
+    wx.showModal({
+      title: '添加品种类目',
+      editable: true,
+      placeholderText: '请输入植物品种名称',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const app = getApp();
+          const success = app.addSpeciesCategory(res.content);
+          if (success) {
+            this.setData({
+              speciesCategories: app.globalData.speciesCategories
+            });
+            wx.showToast({ title: '添加成功', icon: 'success' });
+          } else {
+            wx.showToast({ title: '该类目已存在', icon: 'none' });
+          }
+        }
+      }
+    });
+  },
+
+  // 显示添加位置对话框
+  showAddLocationDialog() {
+    wx.showModal({
+      title: '添加位置类目',
+      editable: true,
+      placeholderText: '请输入摆放位置名称',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const app = getApp();
+          const success = app.addLocationCategory(res.content);
+          if (success) {
+            this.setData({
+              locationCategories: app.globalData.locationCategories
+            });
+            wx.showToast({ title: '添加成功', icon: 'success' });
+          } else {
+            wx.showToast({ title: '该类目已存在', icon: 'none' });
+          }
+        }
+      }
+    });
+  },
+
+  // 删除品种类目
+  deleteSpeciesCategory(e) {
+    const name = e.currentTarget.dataset.val;
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除"${name}"这个品种类目吗？`,
+      success: (res) => {
+        if (res.confirm) {
+          const app = getApp();
+          app.removeSpeciesCategory(name);
+          this.setData({
+            speciesCategories: app.globalData.speciesCategories
+          });
+          // 如果当前选中的是被删除的类目，清空选择
+          if (this.data.species === name) {
+            this.setData({ species: '' });
+          }
+          wx.showToast({ title: '删除成功', icon: 'success' });
+        }
+      }
+    });
+  },
+
+  // 删除位置类目
+  deleteLocationCategory(e) {
+    const name = e.currentTarget.dataset.val;
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除"${name}"这个位置类目吗？`,
+      success: (res) => {
+        if (res.confirm) {
+          const app = getApp();
+          app.removeLocationCategory(name);
+          this.setData({
+            locationCategories: app.globalData.locationCategories
+          });
+          // 如果当前选中的是被删除的类目，清空选择
+          if (this.data.location === name) {
+            this.setData({ location: '' });
+          }
+          wx.showToast({ title: '删除成功', icon: 'success' });
+        }
+      }
+    });
   },
 
   onSourceInput(e) {
@@ -180,10 +289,18 @@ Page({
         }
       });
 
+      // ✅ 优化：保存成功后立即设置首页刷新标志
+      const app = getApp();
+      app.globalData.needRefreshIndex = true;
+
       wx.hideLoading();
       this._submitting = false;
-      wx.showToast({ title: '添加成功！', icon: 'success', duration: 1200 });
-      setTimeout(() => wx.navigateBack({ delta: 1 }), 1200);
+      wx.showToast({ title: '添加成功！', icon: 'success', duration: 1000 });
+      
+      // ✅ 优化：缩短延迟时间，提升响应速度
+      setTimeout(() => {
+        wx.navigateBack({ delta: 1 });
+      }, 1000);
 
     } catch (err) {
       this._submitting = false;
@@ -212,21 +329,5 @@ Page({
   // ✅ 修复：添加页面卸载时清理
   onUnload() {
     this._submitting = false;
-  },
-
-  goBack() {
-    wx.navigateBack({ delta: 1 });
-  },
-
-  minusInterval() {
-    if (this.data.waterInterval > 1) {
-      this.setData({ waterInterval: this.data.waterInterval - 1 });
-    }
-  },
-
-  addInterval() {
-    if (this.data.waterInterval < 30) {
-      this.setData({ waterInterval: this.data.waterInterval + 1 });
-    }
   }
 });

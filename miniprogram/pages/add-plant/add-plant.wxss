@@ -252,18 +252,40 @@ page {
   margin-top: 12rpx;
 }
 
+/* 类目标签容器 */
+.category-tags {
+  margin-top: 16rpx;
+}
+
+.tags-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.tag-list {
+  display: inline-flex;
+  gap: 12rpx;
+  padding: 4rpx 0;
+}
+
 .tag-chip {
-  padding: 8rpx 24rpx;
+  position: relative;
+  padding: 8rpx 20rpx;
   background-color: #F3F4F6;
   color: #6B7280;
-  font-size: 24rpx;
+  font-size: 22rpx;
   border-radius: 100rpx;
   transition: all 0.2s ease;
-  border: 1rpx solid transparent;
+  border: 2rpx solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  flex-shrink: 0;
 }
 
 .tag-chip:active {
   background-color: #E5E7EB;
+  transform: scale(0.98);
 }
 
 .tag-chip.active {
@@ -271,6 +293,42 @@ page {
   color: #16A34A;
   border-color: #BBF7D0;
   font-weight: bold;
+}
+
+/* 添加类目按钮 */
+.tag-chip.add-tag {
+  background-color: #FFFFFF;
+  border: 2rpx dashed #D1D5DB;
+  color: #22C55E;
+  font-weight: bold;
+}
+
+.tag-chip.add-tag:active {
+  background-color: #F0FDF4;
+  border-color: #22C55E;
+}
+
+/* 删除按钮 */
+.tag-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24rpx;
+  height: 24rpx;
+  background-color: rgba(156, 163, 175, 0.15);
+  color: #9CA3AF;
+  border-radius: 50%;
+  font-size: 28rpx;
+  line-height: 1;
+  margin-left: 2rpx;
+  font-weight: normal;
+  transition: all 0.2s;
+}
+
+.tag-delete:active {
+  background-color: rgba(156, 163, 175, 0.3);
+  color: #6B7280;
+  transform: scale(1.1);
 }
 
 /* 4. 养护设定区 */

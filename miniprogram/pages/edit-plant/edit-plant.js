@@ -16,14 +16,22 @@ Page({
     originalPhotoList: [], // 原始的云端图片数组
     maxImageCount: 9,
     selectedIndex: -1, // 选中的图片索引（用于交换）
+    speciesCategories: [], // 品种类目
+    locationCategories: [], // 位置类目
   },
 
   onLoad(options) {
     const id = options.id;
     this.setData({ plantId: id });
     
-    // 等 silentLogin 完成后再拉数据
+    // 加载类目数据
     const app = getApp();
+    this.setData({
+      speciesCategories: app.globalData.speciesCategories || [],
+      locationCategories: app.globalData.locationCategories || []
+    });
+    
+    // 等 silentLogin 完成后再拉数据
     app.silentLogin().then(() => {
       this.fetchOldData(id);
     }).catch(() => {
@@ -86,9 +94,111 @@ Page({
     this.setData({ location: e.detail.value });
   },
 
+  // 选择品种
+  selectSpecies(e) {
+    this.setData({ species: e.currentTarget.dataset.val });
+  },
+
+  // 选择位置
+  selectLocation(e) {
+    this.setData({ location: e.currentTarget.dataset.val });
+  },
+
   // ✨ 新增：快捷设置位置
   quickSetLocation(e) {
     this.setData({ location: e.currentTarget.dataset.val });
+  },
+
+  // 显示添加品种对话框
+  showAddSpeciesDialog() {
+    wx.showModal({
+      title: '添加品种类目',
+      editable: true,
+      placeholderText: '请输入植物品种名称',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const app = getApp();
+          const success = app.addSpeciesCategory(res.content);
+          if (success) {
+            this.setData({
+              speciesCategories: app.globalData.speciesCategories
+            });
+            wx.showToast({ title: '添加成功', icon: 'success' });
+          } else {
+            wx.showToast({ title: '该类目已存在', icon: 'none' });
+          }
+        }
+      }
+    });
+  },
+
+  // 显示添加位置对话框
+  showAddLocationDialog() {
+    wx.showModal({
+      title: '添加位置类目',
+      editable: true,
+      placeholderText: '请输入摆放位置名称',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const app = getApp();
+          const success = app.addLocationCategory(res.content);
+          if (success) {
+            this.setData({
+              locationCategories: app.globalData.locationCategories
+            });
+            wx.showToast({ title: '添加成功', icon: 'success' });
+          } else {
+            wx.showToast({ title: '该类目已存在', icon: 'none' });
+          }
+        }
+      }
+    });
+  },
+
+  // 删除品种类目
+  deleteSpeciesCategory(e) {
+    const name = e.currentTarget.dataset.val;
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除"${name}"这个品种类目吗？`,
+      success: (res) => {
+        if (res.confirm) {
+          const app = getApp();
+          app.removeSpeciesCategory(name);
+          this.setData({
+            speciesCategories: app.globalData.speciesCategories
+          });
+          // 如果当前选中的是被删除的类目，清空选择
+          if (this.data.species === name) {
+            this.setData({ species: '' });
+          }
+          wx.showToast({ title: '删除成功', icon: 'success' });
+        }
+      }
+    });
+  },
+
+  // 删除位置类目
+  deleteLocationCategory(e) {
+    const name = e.currentTarget.dataset.val;
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除"${name}"这个位置类目吗？`,
+      success: (res) => {
+        if (res.confirm) {
+          const app = getApp();
+          app.removeLocationCategory(name);
+          this.setData({
+            locationCategories: app.globalData.locationCategories
+          });
+          // 如果当前选中的是被删除的类目，清空选择
+          if (this.data.location === name) {
+            this.setData({ location: '' });
+          }
+          wx.showToast({ title: '删除成功', icon: 'success' });
+        }
+      }
+    });
   },
 
   // ✨ 新增：来源输入处理
@@ -192,7 +302,7 @@ Page({
     if (this._submitting) return;
     this._submitting = true;
 
-    const { nickname, species, location, source, remark, adoptDate, waterInterval, imageList, plantId } = this.data;
+    const { nickname, species, location, source, remark, adoptDate, waterInterval, imageList, plantId, originalPhotoList } = this.data;
 
     if (!nickname || !species || !location) {
       this._submitting = false;
@@ -241,6 +351,11 @@ Page({
         }
       }).filter(Boolean); // 过滤掉 undefined
       
+      // ✅ 修复：找出被删除的图片并清理云存储
+      const deletedPhotos = (originalPhotoList || []).filter(
+        oldPhoto => !finalPhotoList.includes(oldPhoto) && oldPhoto.startsWith('cloud://')
+      );
+      
       // 更新数据库
       await db.collection('plants').doc(plantId).update({
         data: {
@@ -257,10 +372,29 @@ Page({
         }
       });
 
+      // ✅ 修复：数据库更新成功后再清理被删除的图片
+      if (deletedPhotos.length > 0) {
+        wx.cloud.deleteFile({
+          fileList: deletedPhotos
+        }).then(() => {
+          console.log(`【植光】已清理 ${deletedPhotos.length} 张被删除的图片`);
+        }).catch(err => {
+          console.warn('【植光】清理图片失败（不影响主流程）:', err);
+        });
+      }
+
+      // ✅ 优化：保存成功后立即设置首页刷新标志
+      const app = getApp();
+      app.globalData.needRefreshIndex = true;
+
       wx.hideLoading();
       this._submitting = false;
-      wx.showToast({ title: '修改成功！', icon: 'success', duration: 1200 });
-      setTimeout(() => wx.navigateBack({ delta: 1 }), 1200);
+      wx.showToast({ title: '修改成功！', icon: 'success', duration: 1000 });
+      
+      // ✅ 优化：缩短延迟时间，提升响应速度
+      setTimeout(() => {
+        wx.navigateBack({ delta: 1 });
+      }, 1000);
 
     } catch (err) {
       this._submitting = false;

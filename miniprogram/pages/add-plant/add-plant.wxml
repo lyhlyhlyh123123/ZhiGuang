@@ -47,16 +47,36 @@
       <view class="input-wrapper">
         <text class="input-label">植物品种</text>
         <input class="styled-input" placeholder="例如：龟背竹、多肉..." value="{{species}}" bindinput="onSpeciesInput" />
+        <view class="category-tags">
+          <scroll-view scroll-x class="tags-scroll">
+            <view class="tag-list">
+              <view class="tag-chip {{species === item ? 'active' : ''}}" wx:for="{{speciesCategories}}" wx:key="index" bindtap="selectSpecies" data-val="{{item}}">
+                {{item}}
+                <text class="tag-delete" catchtap="deleteSpeciesCategory" data-val="{{item}}">×</text>
+              </view>
+              <view class="tag-chip add-tag" bindtap="showAddSpeciesDialog">
+                <text class="icon icon-plus" style="font-size: 20rpx;"></text> 添加
+              </view>
+            </view>
+          </scroll-view>
+        </view>
       </view>
       
       <view class="input-wrapper">
         <text class="input-label">摆放位置</text>
         <input class="styled-input" placeholder="例如：阳台、客厅、书桌..." value="{{location}}" bindinput="onLocationInput" />
-        <view class="quick-tags">
-          <view class="tag-chip" bindtap="quickSetLocation" data-val="阳台">阳台</view>
-          <view class="tag-chip" bindtap="quickSetLocation" data-val="客厅">客厅</view>
-          <view class="tag-chip" bindtap="quickSetLocation" data-val="书房">书房</view>
-          <view class="tag-chip" bindtap="quickSetLocation" data-val="卧室">卧室</view>
+        <view class="category-tags">
+          <scroll-view scroll-x class="tags-scroll">
+            <view class="tag-list">
+              <view class="tag-chip {{location === item ? 'active' : ''}}" wx:for="{{locationCategories}}" wx:key="index" bindtap="selectLocation" data-val="{{item}}">
+                {{item}}
+                <text class="tag-delete" catchtap="deleteLocationCategory" data-val="{{item}}">×</text>
+              </view>
+              <view class="tag-chip add-tag" bindtap="showAddLocationDialog">
+                <text class="icon icon-plus" style="font-size: 20rpx;"></text> 添加
+              </view>
+            </view>
+          </scroll-view>
         </view>
       </view>
       
