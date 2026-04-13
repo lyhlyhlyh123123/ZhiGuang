@@ -3,7 +3,7 @@
     <view class="back-btn" bindtap="goBack">
       <text class="icon icon-back"></text>
     </view>
-    <text class="nav-title">记录 {{plantName}} 的成长</text>
+    <text class="nav-title">{{editMode ? '编辑' : '记录'}} {{plantName}} 的成长</text>
     <view class="placeholder-box"></view>
   </view>
   <scroll-view scroll-y class="scroll-content">
@@ -86,12 +86,35 @@
     </view>
   </view>
 
+  <view class="section-title">记录时间 (可选)</view>
+  <view class="time-picker-section">
+    <picker mode="date" value="{{selectedDate}}" end="{{currentDate}}" bindchange="onDateChange">
+      <view class="picker-item">
+        <text class="picker-label">日期</text>
+        <view class="picker-value">
+          <text>{{selectedDate || '选择日期'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </view>
+    </picker>
+    <picker mode="time" value="{{selectedTime}}" bindchange="onTimeChange">
+      <view class="picker-item">
+        <text class="picker-label">时间</text>
+        <view class="picker-value">
+          <text>{{selectedTime || '选择时间'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </view>
+    </picker>
+    <view class="time-hint">不填写则默认为当前时间</view>
+  </view>
+
   <view class="section-title">想说的话</view>
   <view class="input-card">
     <textarea placeholder="描述下此刻的心情..." value="{{note}}" bindinput="onNoteInput" maxlength="200" class="diary-input"></textarea>
     <view class="word-count">{{note.length || 0}} / 200</view>
   </view>
 
-  <button class="save-btn" bindtap="submitJournal">保存这条动态</button>
+  <button class="save-btn" bindtap="submitJournal">{{editMode ? '更新记录' : '保存这条动态'}}</button>
   </scroll-view>
 </view>

@@ -1,6 +1,7 @@
 // pages/add-plant/add-plant.js
 const db = wx.cloud.database();
 const { uploadImages } = require('../../utils/imageHelper.js');
+const { smartCompress } = require('../../utils/imageCompressor.js');
 
 Page({
   data: {
@@ -158,7 +159,7 @@ Page({
   },
 
   // 选择图片（支持多选）
-  chooseImages() {
+  async chooseImages() {
     const remaining = this.data.maxImageCount - this.data.tempImagePaths.length;
     
     if (remaining <= 0) {
@@ -166,18 +167,40 @@ Page({
       return;
     }
 
-    wx.chooseMedia({
-      count: remaining,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'], // 使用压缩图，减少上传时间
-    }).then(res => {
-      const newPaths = res.tempFiles.map(file => file.tempFilePath);
-      const allPaths = [...this.data.tempImagePaths, ...newPaths];
+    try {
+      const res = await wx.chooseMedia({
+        count: remaining,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        sizeType: ['original'], // ✅ 先选择原图，然后智能压缩
+      });
+
+      // ✅ 显示压缩进度
+      if (res.tempFiles.length > 0) {
+        wx.showLoading({ title: '图片处理中...', mask: true });
+      }
+
+      // ✅ 智能压缩所有图片（根据大小自动选择压缩策略）
+      const compressTasks = res.tempFiles.map(file =>
+        smartCompress(file.tempFilePath)
+      );
+      
+      const compressedPaths = await Promise.all(compressTasks);
+      wx.hideLoading();
+
+      const allPaths = [...this.data.tempImagePaths, ...compressedPaths];
       this.setData({ tempImagePaths: allPaths });
-    }).catch(err => {
+
+      // ✅ 提示压缩结果
+      wx.showToast({
+        title: `已添加${compressedPaths.length}张图片`,
+        icon: 'success',
+        duration: 1500
+      });
+    } catch (err) {
+      wx.hideLoading();
       console.error('【植光】选择照片失败:', err);
-    });
+    }
   },
 
   // 点击图片进行交换

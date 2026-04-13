@@ -46,6 +46,7 @@
           wx:for="{{item.photoList}}" wx:for-item="img" wx:key="*this"
           class="journal-photo"
           src="{{img}}" mode="aspectFill"
+          lazy-load="{{true}}"
           catchtap="previewImg"
           data-src="{{img}}"
           data-list="{{item.photoList}}"

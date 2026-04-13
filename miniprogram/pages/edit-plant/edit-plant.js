@@ -1,6 +1,7 @@
 // pages/edit-plant/edit-plant.js
 const db = wx.cloud.database();
 const { uploadImages, getPlantPhotos } = require('../../utils/imageHelper.js');
+const { smartCompress } = require('../../utils/imageCompressor.js');
 
 Page({
   data: {
@@ -226,7 +227,7 @@ Page({
   },
 
   // 添加图片
-  chooseImages() {
+  async chooseImages() {
     const remaining = this.data.maxImageCount - this.data.imageList.length;
     
     if (remaining <= 0) {
@@ -234,22 +235,45 @@ Page({
       return;
     }
 
-    wx.chooseMedia({
-      count: remaining,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
-    }).then(res => {
-      const newImages = res.tempFiles.map(file => ({
-        url: file.tempFilePath,
+    try {
+      const res = await wx.chooseMedia({
+        count: remaining,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        sizeType: ['original'], // ✅ 先选择原图，然后智能压缩
+      });
+
+      // ✅ 显示压缩进度
+      if (res.tempFiles.length > 0) {
+        wx.showLoading({ title: '图片处理中...', mask: true });
+      }
+
+      // ✅ 智能压缩所有图片
+      const compressTasks = res.tempFiles.map(file =>
+        smartCompress(file.tempFilePath)
+      );
+      
+      const compressedPaths = await Promise.all(compressTasks);
+      wx.hideLoading();
+
+      const newImages = compressedPaths.map(path => ({
+        url: path,
         isCloud: false
       }));
+      
       this.setData({
         imageList: [...this.data.imageList, ...newImages]
       });
-    }).catch(err => {
+
+      wx.showToast({
+        title: `已添加${newImages.length}张图片`,
+        icon: 'success',
+        duration: 1500
+      });
+    } catch (err) {
+      wx.hideLoading();
       console.error('【植光】选择照片失败:', err);
-    });
+    }
   },
 
   // 删除图片
@@ -376,8 +400,6 @@ Page({
       if (deletedPhotos.length > 0) {
         wx.cloud.deleteFile({
           fileList: deletedPhotos
-        }).then(() => {
-          console.log(`【植光】已清理 ${deletedPhotos.length} 张被删除的图片`);
         }).catch(err => {
           console.warn('【植光】清理图片失败（不影响主流程）:', err);
         });

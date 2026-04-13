@@ -1,5 +1,6 @@
 // pages/calendar/calendar.js
 const db = wx.cloud.database();
+const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
 
 Page({
   data: {
@@ -34,6 +35,15 @@ Page({
   async loadMonthData() {
     const { year, month } = this.data;
     
+    // ✅ 防刷新保护
+    const check = checkRequestAllowed('calendar_loadMonth');
+    if (!check.allowed) {
+      if (!check.silent) {
+        console.warn('🛡️ 防刷新: 日历加载被限制');
+      }
+      return;
+    }
+    
     // 性能优化：缓存月度数据，避免重复查询
     const cacheKey = `${year}-${month}`;
     if (this._monthCache && this._monthCache[cacheKey]) {
@@ -41,6 +51,9 @@ Page({
       this.buildCalendar();
       return;
     }
+    
+    // ✅ 记录请求
+    logRequest('calendar_loadMonth');
     
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 1);
@@ -129,6 +142,15 @@ Page({
     const { date } = e.currentTarget.dataset;
     if (!date) return;
     
+    // ✅ 防刷新保护
+    const check = checkRequestAllowed('calendar_selectDay');
+    if (!check.allowed) {
+      if (!check.silent) {
+        console.warn('🛡️ 防刷新: 日期选择被限制');
+      }
+      return;
+    }
+    
     // 性能优化：缓存日期数据（但今天的数据不使用缓存，确保实时性）
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -141,6 +163,9 @@ Page({
       });
       return;
     }
+    
+    // ✅ 记录请求
+    logRequest('calendar_selectDay');
     
     this.setData({ selectedDate: date });
     const parts = date.split('-');
@@ -164,7 +189,7 @@ Page({
         plantRes.data.forEach(p => { this._plantCache[p._id] = p; });
       }
 
-      const dayJournals = res.data
+      let dayJournals = res.data
         .filter(j => j.plantName && j.plantName.trim())
         .map(j => {
         const dt = new Date(j.createTime);
@@ -174,6 +199,30 @@ Page({
         j.location = plant.location || '';
         return j;
       });
+      
+      // ✅ 新增：批量获取日记图片的临时链接（带缓存）
+      const { getTempFileURLs } = require('../../utils/imageCache.js');
+      const photoIDs = dayJournals
+        .flatMap(j => j.photoList || [])
+        .filter(id => id && id.startsWith('cloud://'));
+      
+      if (photoIDs.length > 0) {
+        try {
+          const tempURLs = await getTempFileURLs(photoIDs);
+          const urlMap = tempURLs.reduce((map, item) => {
+            map[item.fileID] = item.tempFileURL;
+            return map;
+          }, {});
+          
+          // 替换为临时链接
+          dayJournals = dayJournals.map(j => ({
+            ...j,
+            photoList: (j.photoList || []).map(id => urlMap[id] || id)
+          }));
+        } catch (err) {
+          console.warn('⚠️ 获取日记图片临时链接失败:', err);
+        }
+      }
       
       // 缓存当天数据
       if (!this._dayCache) this._dayCache = {};

@@ -41,7 +41,7 @@
       <view class="summary-right">
         <block wx:if="{{todoCount > 0}}">
           <view class="avatar-group">
-            <image class="mini-avatar-img" wx:for="{{todoAvatars}}" wx:key="_id" src="{{item.photoFileID}}" mode="aspectFill"></image>
+            <image class="mini-avatar-img" wx:for="{{todoAvatars}}" wx:key="_id" src="{{item.photoFileID}}" mode="aspectFill" lazy-load="{{true}}"></image>
             <view class="mini-avatar-count" wx:if="{{todoCount > 3}}">+{{todoCount - 3}}</view>
           </view>
         </block>

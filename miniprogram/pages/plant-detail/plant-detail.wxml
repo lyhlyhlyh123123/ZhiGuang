@@ -126,7 +126,7 @@
         <!-- 第2页：来源 -->
         <swiper-item>
           <view class="swiper-card">
-            <view class="card-single">
+            <view class="card-single" bindtap="showFullSource">
               <view class="single-header">
                 <text class="single-icon iconfont icon-laiyuan"></text>
                 <text class="single-label">来源</text>

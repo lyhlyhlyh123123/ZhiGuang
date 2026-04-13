@@ -1,5 +1,6 @@
 const db = wx.cloud.database();
 const { getPlantPhotos } = require('../../utils/imageHelper.js');
+const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
 
 Page({
   data: {
@@ -41,6 +42,18 @@ Page({
 
   // 用云函数拉取植物 + 日记（绕过数据库权限，支持他人查看）
   loadAll() {
+    // ✅ 防刷新保护（详情页允许更频繁的刷新，但仍需限制）
+    const check = checkRequestAllowed('plantDetail_loadAll');
+    if (!check.allowed) {
+      if (!check.silent) {
+        console.warn('🛡️ 防刷新: 植物详情加载被限制');
+      }
+      return;
+    }
+    
+    // ✅ 记录请求
+    logRequest('plantDetail_loadAll');
+    
     // 只有首次加载（无数据）才显示骨架屏
     if (!this.data.plantInfo) {
       this.setData({ loading: true });
@@ -108,14 +121,11 @@ Page({
         }, 800);
       }
 
-      // 提前转换封面图为临时链接，供分享使用
+      // ✅ 优化：使用缓存获取临时链接，供分享使用
       if (plant.photoFileID && plant.photoFileID.startsWith('cloud://')) {
-        wx.cloud.getTempFileURL({
-          fileList: [plant.photoFileID]
-        }).then(res => {
-          if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
-            this._shareCoverUrl = res.fileList[0].tempFileURL;
-          }
+        const { getTempFileURL } = require('../../utils/imageCache.js');
+        getTempFileURL(plant.photoFileID).then(tempURL => {
+          this._shareCoverUrl = tempURL;
         }).catch(() => {});
       }
     }).catch(err => {
@@ -293,10 +303,10 @@ Page({
     
     if (!width || !height) return;
     
-    // 获取系统信息
-    const systemInfo = wx.getSystemInfoSync();
-    const screenWidth = systemInfo.windowWidth;
-    const screenHeight = systemInfo.windowHeight;
+    // 获取窗口信息（使用新API替代废弃的getSystemInfoSync）
+    const windowInfo = wx.getWindowInfo();
+    const screenWidth = windowInfo.windowWidth;
+    const screenHeight = windowInfo.windowHeight;
     
     // 计算图片宽高比
     const ratio = height / width;
@@ -371,10 +381,47 @@ Page({
     });
   },
 
-  // 长按删除单条日记
+  // 长按日记，显示操作菜单
   deleteJournal(e) {
     if (!this.data.isOwner) return;
     const { id, index } = e.currentTarget.dataset;
+    
+    wx.showActionSheet({
+      itemList: ['编辑记录', '删除记录'],
+      itemColor: '#1F2937',
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          // 编辑记录
+          this.editJournal(id, index);
+        } else if (res.tapIndex === 1) {
+          // 删除记录
+          this.confirmDeleteJournal(id, index);
+        }
+      }
+    });
+  },
+
+  // 编辑日记
+  editJournal(id, index) {
+    const journal = this.data.journalList[index];
+    if (!journal) return;
+    
+    // 将日记数据编码后传递
+    const journalData = encodeURIComponent(JSON.stringify({
+      _id: journal._id,
+      selectedActions: journal.renderActions || journal.selectedActions || [],
+      note: journal.note || '',
+      photoList: journal.photoList || [],
+      createTime: journal.createTime
+    }));
+    
+    wx.navigateTo({
+      url: `/pages/add-journal/add-journal?id=${this.data.plantId}&name=${this.data.plantInfo.nickname}&editMode=true&journalData=${journalData}`
+    });
+  },
+
+  // 确认删除日记
+  confirmDeleteJournal(id, index) {
     wx.showModal({
       title: '删除记录',
       content: '确定删除这条养护记录吗？',
@@ -406,6 +453,11 @@ Page({
       confirmColor: '#EF4444',
       success: (res) => {
         if (!res.confirm) return;
+        
+        // ✅ 设置全局刷新标志，删除后返回首页时刷新
+        const app = getApp();
+        app.globalData.needRefreshIndex = true;
+        
         wx.showLoading({ title: '删除中...' });
         
         // ✅ 修复：删除时同步清理云存储文件
@@ -450,9 +502,6 @@ Page({
             if (uniqueFileIDs.length > 0) {
               return wx.cloud.deleteFile({
                 fileList: uniqueFileIDs
-              }).then(delRes => {
-                console.log(`【植光】已清理 ${uniqueFileIDs.length} 个云存储文件`);
-                return delRes;
               }).catch(err => {
                 console.warn('【植光】云存储文件清理失败（不影响删除）:', err);
               });
@@ -608,6 +657,20 @@ Page({
     wx.showModal({
       title: '备注信息',
       content: plantInfo.remark,
+      showCancel: false,
+      confirmText: '知道了',
+      confirmColor: '#22C55E'
+    });
+  },
+
+  // 显示完整来源
+  showFullSource() {
+    const { plantInfo } = this.data;
+    if (!plantInfo || !plantInfo.source) return;
+    
+    wx.showModal({
+      title: '来源信息',
+      content: plantInfo.source,
       showCancel: false,
       confirmText: '知道了',
       confirmColor: '#22C55E'

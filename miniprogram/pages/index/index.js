@@ -1,7 +1,12 @@
 // pages/index/index.js
 const db = wx.cloud.database();
 const { getCoverPhoto, getPlantPhotos } = require('../../utils/imageHelper.js');
+const { getTempFileURLs, preloadImages } = require('../../utils/imageCache.js');
+const { withAntiRefresh } = require('../../utils/antiRefresh.js');
 const PLANT_QUERY_LIMIT = 100; // 单次查询植物上限
+
+// ✅ 配置参数
+const PRELOAD_THRESHOLD = 0.7; // 滚动到70%时预加载下一页
 
 Page({
   data: {
@@ -29,7 +34,6 @@ Page({
     const needRefresh = this._needRefresh || app.globalData.needRefreshIndex;
     
     if (needRefresh) {
-      console.log('【植光】onShow: 检测到刷新标志，执行强制刷新');
       this._needRefresh = false;
       app.globalData.needRefreshIndex = false;
       this.fetchPlants(true); // 强制刷新
@@ -49,7 +53,6 @@ Page({
 
   // ✨ 新增：下拉刷新
   onPullDownRefresh() {
-    console.log('【植光】用户触发下拉刷新');
     this._needRefresh = true; // 强制刷新
     this.fetchPlants(true);
     // 刷新完成后停止下拉动画
@@ -75,41 +78,12 @@ Page({
     });
   },
 
-  // ✨ 新增：图片加载失败处理 (解决 403 或其他加载问题)
+  // ✨ 图片加载失败处理（已优化，使用兜底图）
   onImageError(e) {
     const { id } = e.currentTarget.dataset;
+    console.warn('⚠️ 图片加载失败:', id);
     
-    // 尝试通过 getTempFileURL 重新获取临时链接
-    const plant = this.data.plantList.find(p => p._id === id);
-    if (plant && plant.photoFileID && plant.photoFileID.startsWith('cloud://')) {
-      wx.cloud.getTempFileURL({
-        fileList: [plant.photoFileID]
-      }).then(res => {
-        if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
-          // 重新获取成功，更新为临时链接
-          const plantList = this.data.plantList.map(item => {
-            if (item._id === id) {
-              return { ...item, photoFileID: res.fileList[0].tempFileURL };
-            }
-            return item;
-          });
-          this.setData({ plantList });
-        } else {
-          // 获取失败，使用兜底图
-          this.setFallbackImage(id);
-        }
-      }).catch(() => {
-        // 获取失败，使用兜底图
-        this.setFallbackImage(id);
-      });
-    } else {
-      // 非云存储图片，直接使用兜底图
-      this.setFallbackImage(id);
-    }
-  },
-
-  // 设置兜底图片
-  setFallbackImage(id) {
+    // 直接使用兜底图，不再重复请求
     const plantList = this.data.plantList.map(item => {
       if (item._id === id) {
         return { ...item, photoFileID: '/images/avatar.png' };
@@ -131,21 +105,33 @@ Page({
     return interval - diffDays;
   },
 
-  // 去云端拉取植物列表的方法
+  // 去云端拉取植物列表的方法（带防刷新保护）
   fetchPlants(forceRefresh = false) {
     // ✅ 修复：添加请求锁，防止竞态条件
     if (this._fetching) return;
     
-    // 节流：30秒内不重复请求，但允许强制刷新或从子页面返回时刷新
-    const now = Date.now();
-    if (!forceRefresh && !this._needRefresh && this._lastFetchTime && now - this._lastFetchTime < 30000) {
-      console.log('【植光】节流保护：距上次刷新未满30秒');
+    // ✅ 防刷新保护：检查请求频率
+    const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
+    const check = checkRequestAllowed('index_fetchPlants');
+    
+    if (!check.allowed && !forceRefresh) {
+      if (!check.silent) {
+        console.warn('🛡️ 防刷新: 请求被限制');
+      }
       return;
     }
     
+    // 节流：60秒内不重复请求，但允许强制刷新或从子页面返回时刷新
+    const now = Date.now();
+    if (!forceRefresh && !this._needRefresh && this._lastFetchTime && now - this._lastFetchTime < 60000) {
+      return;
+    }
+    
+    // ✅ 记录请求
+    logRequest('index_fetchPlants');
+    
     // ✅ 强制刷新时清空缓存，确保显示最新数据
     if (forceRefresh) {
-      console.log('【植光】强制刷新，清空缓存');
       this._cachedFilteredPlants = null;
       this._lastSearchKey = null;
       this._lastAllPlantsCount = null;
@@ -171,16 +157,38 @@ Page({
         .get();
 
       Promise.all([plantsPromise, journalsPromise])
-        .then(([plantsRes, journalsRes]) => {
+        .then(async ([plantsRes, journalsRes]) => {
           wx.hideNavigationBarLoading();
           const rawPlants = (plantsRes.result && plantsRes.result.plants) || [];
           const todayJournals = journalsRes.data || [];
 
-          const allPlants = rawPlants.map(p => ({
-            ...p,
-            photoFileID: getCoverPhoto(p), // 统一使用封面图
-            waterCountdown: this.calcWaterCountdown(p)
-          }));
+          // ✅ 收集所有云存储图片ID
+          const cloudFileIDs = rawPlants
+            .map(p => getCoverPhoto(p))
+            .filter(id => id && id.startsWith('cloud://'));
+
+          // ✅ 批量获取临时链接（带缓存优化）
+          let tempURLMap = {};
+          if (cloudFileIDs.length > 0) {
+            try {
+              const tempURLs = await getTempFileURLs(cloudFileIDs);
+              tempURLMap = tempURLs.reduce((map, item) => {
+                map[item.fileID] = item.tempFileURL;
+                return map;
+              }, {});
+            } catch (err) {
+              console.warn('⚠️ 批量获取临时链接失败，使用原始链接:', err);
+            }
+          }
+
+          const allPlants = rawPlants.map(p => {
+            const coverPhoto = getCoverPhoto(p);
+            return {
+              ...p,
+              photoFileID: tempURLMap[coverPhoto] || coverPhoto, // ✅ 使用临时链接或原始链接
+              waterCountdown: this.calcWaterCountdown(p)
+            };
+          });
 
           // 统计植物科数（去重）
           const speciesSet = new Set();
@@ -301,6 +309,33 @@ Page({
       noResults: filteredPlants.length === 0 && (this._lastSearchKey !== '' && this._lastSearchKey !== 'TODO_CHECKIN'),
       noPlants: this.data.allPlants.length === 0
     });
+    
+    // ✅ 新增：预加载下一页图片（如果有下一页）
+    this.preloadNextPageImages(page, totalPages, filteredPlants);
+  },
+
+  // ✅ 新增：预加载下一页图片
+  preloadNextPageImages(currentPage, totalPages, filteredPlants) {
+    if (currentPage >= totalPages) return; // 已是最后一页
+    if (this._preloadingPage === currentPage + 1) return; // 正在预加载
+    
+    this._preloadingPage = currentPage + 1;
+    
+    // 获取下一页的植物
+    const nextStart = currentPage * this.data.pageSize;
+    const nextPlants = filteredPlants.slice(nextStart, nextStart + this.data.pageSize);
+    
+    // 收集图片ID
+    const fileIDs = nextPlants
+      .map(p => p.photoFileID)
+      .filter(id => id && id.startsWith('cloud://'));
+    
+    if (fileIDs.length > 0) {
+      // 异步预加载，不阻塞主流程
+      preloadImages(fileIDs).finally(() => {
+        this._preloadingPage = null;
+      });
+    }
   },
 
   /**
@@ -359,8 +394,9 @@ Page({
     this._clicking = true;
     setTimeout(() => this._clicking = false, 500);
     
-    this._needRefresh = true; // 返回时强制刷新
-    this._preserveState = true; // 保留当前页面状态
+    // ✅ 优化：不再默认刷新，由详情页决定是否需要刷新
+    // this._needRefresh = true; // 删除：不需要默认刷新
+    this._preserveState = true; // 保留当前页面状态（搜索、页码等）
     const plantId = e.currentTarget.dataset.id;
     wx.navigateTo({ url: `/pages/plant-detail/plant-detail?id=${plantId}` });
   },

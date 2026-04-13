@@ -1,5 +1,6 @@
 // pages/batch/batch.js
 const db = wx.cloud.database();
+const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
 
 Page({
   data: {
@@ -38,6 +39,18 @@ Page({
   },
 
   loadPlants() {
+    // ✅ 防刷新保护
+    const check = checkRequestAllowed('batch_loadPlants');
+    if (!check.allowed) {
+      if (!check.silent) {
+        console.warn('🛡️ 防刷新: 批量操作加载被限制');
+      }
+      return;
+    }
+    
+    // ✅ 记录请求
+    logRequest('batch_loadPlants');
+    
     const app = getApp();
     app.silentLogin().then(() => {
       wx.cloud.callFunction({ name: 'getMyPlants' })

@@ -290,3 +290,54 @@ page {
 
 .add-img-btn .plus { font-size: 56rpx; color: #A7D9B0; font-weight: 300; }
 .add-img-count { font-size: 20rpx; color: #A7D9B0; }
+
+/* 时间选择器样式 */
+.time-picker-section {
+  background-color: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  margin-bottom: 48rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.03);
+  border: 1rpx solid #F0FDF4;
+}
+
+.picker-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 16rpx;
+  border-bottom: 1rpx solid #F3F4F6;
+}
+
+.picker-item:last-child {
+  border-bottom: none;
+}
+
+.picker-label {
+  font-size: 28rpx;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.picker-value {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 28rpx;
+  color: #1F2937;
+}
+
+.picker-arrow {
+  font-size: 40rpx;
+  color: #D1D5DB;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.time-hint {
+  font-size: 24rpx;
+  color: #9CA3AF;
+  text-align: center;
+  margin-top: 12rpx;
+  padding: 0 16rpx;
+}
