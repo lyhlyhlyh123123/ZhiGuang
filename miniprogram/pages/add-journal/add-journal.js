@@ -1,5 +1,6 @@
 const db = wx.cloud.database();
 const { smartCompress } = require('../../utils/imageCompressor.js');
+const { invalidateCache } = require('../../utils/imageCache.js');
 
 Page({
   data: {
@@ -343,6 +344,7 @@ Page({
         // 删除被移除的图片
         const deletedPhotos = originalPhotos.filter(photo => !keptPhotos.includes(photo));
         if (deletedPhotos.length > 0) {
+          invalidateCache(deletedPhotos);
           wx.cloud.deleteFile({
             fileList: deletedPhotos
           }).catch(err => {

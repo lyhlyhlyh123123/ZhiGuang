@@ -314,24 +314,35 @@ Page({
     this.preloadNextPageImages(page, totalPages, filteredPlants);
   },
 
-  // ✅ 新增：预加载下一页图片
+  // ✅ 预加载下一页图片（临时链接缓存）
   preloadNextPageImages(currentPage, totalPages, filteredPlants) {
-    if (currentPage >= totalPages) return; // 已是最后一页
-    if (this._preloadingPage === currentPage + 1) return; // 正在预加载
-    
+    if (currentPage >= totalPages) return;
+    if (this._preloadingPage === currentPage + 1) return;
+
     this._preloadingPage = currentPage + 1;
-    
-    // 获取下一页的植物
+
     const nextStart = currentPage * this.data.pageSize;
     const nextPlants = filteredPlants.slice(nextStart, nextStart + this.data.pageSize);
-    
-    // 收集图片ID
+
+    // 此时 photoFileID 已是 tempURL（http 链接）或本地路径，无需过滤
+    // 但 preloadImages 内部的 getCachedTempURL 只处理 cloud:// 开头的
+    // 所以这里从 allPlants 取原始 fileID 来预加载
+    const allPlantsMap = {};
+    (this.data.allPlants || []).forEach(p => {
+      allPlantsMap[p._id] = p;
+    });
+
     const fileIDs = nextPlants
-      .map(p => p.photoFileID)
-      .filter(id => id && id.startsWith('cloud://'));
-    
+      .map(p => {
+        const original = allPlantsMap[p._id];
+        if (!original) return null;
+        const { getCoverPhoto } = require('../../utils/imageHelper.js');
+        const id = getCoverPhoto(original);
+        return id && id.startsWith('cloud://') ? id : null;
+      })
+      .filter(Boolean);
+
     if (fileIDs.length > 0) {
-      // 异步预加载，不阻塞主流程
       preloadImages(fileIDs).finally(() => {
         this._preloadingPage = null;
       });

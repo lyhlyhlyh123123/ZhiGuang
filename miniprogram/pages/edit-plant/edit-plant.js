@@ -2,6 +2,7 @@
 const db = wx.cloud.database();
 const { uploadImages, getPlantPhotos } = require('../../utils/imageHelper.js');
 const { smartCompress } = require('../../utils/imageCompressor.js');
+const { invalidateCache } = require('../../utils/imageCache.js');
 
 Page({
   data: {
@@ -398,6 +399,8 @@ Page({
 
       // ✅ 修复：数据库更新成功后再清理被删除的图片
       if (deletedPhotos.length > 0) {
+        // 失效被删除图片的本地缓存
+        invalidateCache(deletedPhotos);
         wx.cloud.deleteFile({
           fileList: deletedPhotos
         }).catch(err => {
