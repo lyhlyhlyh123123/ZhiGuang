@@ -131,7 +131,12 @@ function setCachedFilePath(fileID, localPath) {
 function downloadAndCache(fileID, tempURL) {
   return new Promise((resolve, reject) => {
     // 生成唯一本地路径
-    const ext = 'jpg';
+    const cleanUrl = (fileID || tempURL || '').split('?')[0];
+    const matchExt = cleanUrl.split('.').pop().toLowerCase();
+    const validExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'];
+    const ext = validExts.includes(matchExt) ? matchExt : 'jpg';
+
+    // 生成唯一本地路径
     const hash = fileID.replace(/[^a-zA-Z0-9]/g, '').slice(-20);
     const localPath = `${FILE_CACHE_DIR}${hash}.${ext}`;
 
@@ -193,10 +198,14 @@ function getTempFileURLs(fileIDs) {
     return Promise.resolve([]);
   }
 
+  // ✅ 新增：入口去重，防止重复进入查缓存和发请求流程
+  const uniqueFileIDs = [...new Set(fileIDs)];
+
   const result = [];
   const uncachedIDs = [];
 
-  fileIDs.forEach(fileID => {
+  // 👇 下面的循环改为遍历去重后的 uniqueFileIDs
+  uniqueFileIDs.forEach(fileID => {
     // 优先用本地文件缓存（零CDN）
     const localPath = getCachedFilePath(fileID);
     if (localPath) {

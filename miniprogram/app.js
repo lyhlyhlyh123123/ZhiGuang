@@ -69,11 +69,17 @@ App({
 
       wx.cloud.callFunction({
         name: 'login'
-      }).then(res => {
+      }).then((res) => {
         const newOpenid = res.result.openid;
         this.globalData.openid = newOpenid;
         wx.setStorageSync('openid', newOpenid);
-        this.loginPromise = null; // 登录成功后清除缓存，允许重试
+
+        const localUserInfo = wx.getStorageSync('userInfo');
+        if (localUserInfo) {
+          this.globalData.userInfo = localUserInfo;
+        }
+
+        this.loginPromise = null;
         resolve(newOpenid);
       }).catch(err => {
         console.error('【植光】❌ 云端鉴权失败', err);

@@ -16,7 +16,7 @@
       bindtap="selectDay" data-date="{{item.dateStr}}"
     >
       <text class="day-num" wx:if="{{!item.empty}}">{{item.day}}</text>
-      <view class="dot" wx:if="{{item.count > 0}}"></view>
+      <view class="dot" wx:if="{{item.hasRecord}}"></view>
     </view>
   </view>
 

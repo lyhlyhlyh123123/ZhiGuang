@@ -1,5 +1,4 @@
 // pages/calendar/calendar.js
-const db = wx.cloud.database();
 const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
 
 Page({
@@ -54,46 +53,26 @@ Page({
     
     // ✅ 记录请求
     logRequest('calendar_loadMonth');
-    
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 1);
-    const _ = db.command;
-    
-    try {
-      // ✅ 修复：使用分页查询避免数据遗漏
-      const MAX_LIMIT = 100;
-      let allJournals = [];
-      let hasMore = true;
-      let skip = 0;
 
-      while (hasMore) {
-        const res = await db.collection('journals')
-          .where({ createTime: _.gte(start).and(_.lt(end)) })
-          .skip(skip)
-          .limit(MAX_LIMIT)
-          .get();
-        
-        allJournals = allJournals.concat(res.data);
-        hasMore = res.data.length === MAX_LIMIT;
-        skip += MAX_LIMIT;
-        
-        // 安全上限：单月最多查500条（防止异常数据）
-        if (skip >= 500) break;
+    try {
+      const app = getApp();
+      await app.silentLogin();
+      const res = await wx.cloud.callFunction({
+        name: 'getCalendarMonthStats',
+        data: { year, month }
+      });
+
+      if (!res.result || !res.result.success) {
+        throw new Error((res.result && res.result.message) || '加载日历统计失败');
       }
-      
-      const monthStats = {};
-      allJournals
-        .filter(j => j.plantName && j.plantName.trim())
-        .forEach(j => {
-          const d = new Date(j.createTime);
-          const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          monthStats[key] = (monthStats[key] || 0) + 1;
-        });
-      
-      // 缓存月度统计数据
+
+      const daysWithRecord = res.result.daysWithRecord || [];
+      const monthStats = daysWithRecord.reduce((map, dayKey) => {
+        map[dayKey] = true;
+        return map;
+      }, {});
       if (!this._monthCache) this._monthCache = {};
       this._monthCache[cacheKey] = monthStats;
-      
       this.setData({ monthStats });
     } catch(e) {
       console.error('【植光】日历数据加载失败:', e);
@@ -119,7 +98,7 @@ Page({
     for (let i = 0; i < firstDay; i++) days.push({ empty: true });
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      days.push({ day: d, dateStr, isToday: dateStr === todayStr, count: monthStats[dateStr] || 0 });
+      days.push({ day: d, dateStr, isToday: dateStr === todayStr, hasRecord: !!monthStats[dateStr] });
     }
     this.setData({ calendarDays: days });
   },
@@ -168,44 +147,42 @@ Page({
     logRequest('calendar_selectDay');
     
     this.setData({ selectedDate: date });
-    const parts = date.split('-');
-    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0);
-    const nextDay = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + 1, 0, 0, 0);
-    const _ = db.command;
-    
-    try {
-      const res = await db.collection('journals')
-        .where({ createTime: _.gte(d).and(_.lt(nextDay)) })
-        .orderBy('createTime', 'desc').get();
 
-      // 批量拉取关联植物信息（种类、地点），优先用缓存
-      const plantIds = [...new Set(res.data.map(j => j.plantId).filter(Boolean))];
-      const uncachedIds = plantIds.filter(id => !this._plantCache[id]);
-      if (uncachedIds.length > 0) {
-        const plantRes = await db.collection('plants')
-          .where({ _id: db.command.in(uncachedIds) })
-          .field({ _id: true, species: true, location: true })
-          .get();
-        plantRes.data.forEach(p => { this._plantCache[p._id] = p; });
+    try {
+      const app = getApp();
+      await app.silentLogin();
+      const res = await wx.cloud.callFunction({
+        name: 'getCalendarDayJournals',
+        data: { date }
+      });
+
+      if (!res.result || !res.result.success) {
+        throw new Error((res.result && res.result.message) || '加载当天日记失败');
       }
 
-      let dayJournals = res.data
+      const journals = res.result.journals || [];
+      const plants = res.result.plants || [];
+      plants.forEach(p => { this._plantCache[p._id] = p; });
+
+      let dayJournals = journals
         .filter(j => j.plantName && j.plantName.trim())
         .map(j => {
-        const dt = new Date(j.createTime);
-        j.formatTime = `${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
-        const plant = this._plantCache[j.plantId] || {};
-        j.species = plant.species || '';
-        j.location = plant.location || '';
-        return j;
-      });
-      
-      // ✅ 新增：批量获取日记图片的临时链接（带缓存）
+          const dt = new Date(j.createTime);
+          const formatted = `${dt.getHours()}:${String(dt.getMinutes()).padStart(2, '0')}`;
+          const plant = this._plantCache[j.plantId] || {};
+          return {
+            ...j,
+            formatTime: formatted,
+            species: plant.species || '',
+            location: plant.location || ''
+          };
+        });
+
       const { getTempFileURLs } = require('../../utils/imageCache.js');
       const photoIDs = dayJournals
         .flatMap(j => j.photoList || [])
         .filter(id => id && id.startsWith('cloud://'));
-      
+
       if (photoIDs.length > 0) {
         try {
           const tempURLs = await getTempFileURLs(photoIDs);
@@ -213,8 +190,7 @@ Page({
             map[item.fileID] = item.tempFileURL;
             return map;
           }, {});
-          
-          // 替换为临时链接
+
           dayJournals = dayJournals.map(j => ({
             ...j,
             photoList: (j.photoList || []).map(id => urlMap[id] || id)
@@ -223,11 +199,9 @@ Page({
           console.warn('⚠️ 获取日记图片临时链接失败:', err);
         }
       }
-      
-      // 缓存当天数据
+
       if (!this._dayCache) this._dayCache = {};
       this._dayCache[date] = dayJournals;
-      
       this.setData({ dayJournals });
     } catch(e) {
       this.setData({ dayJournals: [] });

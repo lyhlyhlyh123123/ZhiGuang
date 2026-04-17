@@ -1,5 +1,4 @@
 // pages/add-plant/add-plant.js
-const db = wx.cloud.database();
 const { uploadImages } = require('../../utils/imageHelper.js');
 const { smartCompress } = require('../../utils/imageCompressor.js');
 
@@ -276,8 +275,8 @@ Page({
     wx.showLoading({ title: '上传中...' });
 
     try {
-      // 批量上传图片到云存储
-      const uploadResult = await uploadImages(tempImagePaths, 'plant-photos', true);
+      // 图片已在选图时经过 smartCompress，此处直接上传不重复压缩
+      const uploadResult = await uploadImages(tempImagePaths, 'plant-photos', false);
       const photoList = uploadResult.success;
 
       // ✅ 修复：如果有图片上传失败，提示用户
@@ -294,8 +293,9 @@ Page({
       today.setHours(0, 0, 0, 0);
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-      // 保存到数据库
-      await db.collection('plants').add({
+      // 调用云函数添加植物
+      const addResult = await wx.cloud.callFunction({
+        name: 'addPlant',
         data: {
           nickname,
           species,
@@ -303,14 +303,14 @@ Page({
           source: source || '',
           remark: remark || '',
           adoptDate: adoptDate || todayStr,
-          photoList: photoList,           // 新增：图片数组
-          photoFileID: photoList[0] || '', // 兼容：第一张作为封面
-          waterInterval,
-          lastWaterDate: today,
-          createTime: db.serverDate(),
-          updateTime: db.serverDate()
+          photoList,
+          waterInterval
         }
       });
+
+      if (!addResult.result.success) {
+        throw new Error(addResult.result.message);
+      }
 
       // ✅ 优化：保存成功后立即设置首页刷新标志
       const app = getApp();

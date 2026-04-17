@@ -1,6 +1,7 @@
-const db = wx.cloud.database();
 const { getPlantPhotos } = require('../../utils/imageHelper.js');
 const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
+const { invalidateCache, getTempFileURLs } = require('../../utils/imageCache.js');
+const { getPlantPhotosWithCache, getCoverPhotoWithCache } = require('../../utils/imageHelper.js');
 
 Page({
   data: {
@@ -43,6 +44,7 @@ Page({
   // 用云函数拉取植物 + 日记（绕过数据库权限，支持他人查看）
   loadAll() {
     // ✅ 防刷新保护（详情页允许更频繁的刷新，但仍需限制）
+    
     const check = checkRequestAllowed('plantDetail_loadAll');
     if (!check.allowed) {
       if (!check.silent) {
@@ -61,7 +63,7 @@ Page({
     wx.cloud.callFunction({
       name: 'getPlantPublic',
       data: { plantId: this.data.plantId }
-    }).then(res => {
+    }).then(async res => {
       const { success, plant, journals } = res.result;
       if (!success || !plant) {
         this.setData({ loading: false });
@@ -93,7 +95,7 @@ Page({
       const hasLiked = likes.includes(currentUserId);
 
       // 获取图片列表（兼容新旧数据）
-      const photos = getPlantPhotos(plant);
+      const photos = await getPlantPhotosWithCache(plant);
 
       this.setData({
         plantInfo: plant,
@@ -102,7 +104,7 @@ Page({
         loading: false,
         likeCount,
         hasLiked,
-        plantPhotos: photos
+        plantPhotos: photos // ✅ 拿到缓存 URL 存入 data
       });
       wx.setNavigationBarTitle({ title: plant.nickname + '的成长' });
       this._processJournals(journals || []);
@@ -123,9 +125,8 @@ Page({
 
       // ✅ 优化：使用缓存获取临时链接，供分享使用
       if (plant.photoFileID && plant.photoFileID.startsWith('cloud://')) {
-        const { getTempFileURL } = require('../../utils/imageCache.js');
-        getTempFileURL(plant.photoFileID).then(tempURL => {
-          this._shareCoverUrl = tempURL;
+        getCoverPhotoWithCache(plant).then(tempURL => {
+        this._shareCoverUrl = tempURL;
         }).catch(() => {});
       }
     }).catch(err => {
@@ -136,7 +137,7 @@ Page({
   },
 
   // 格式化日记数据
-  _processJournals(data) {
+  async _processJournals(data) {
     const formattedList = data.map(item => {
       const dateObj = new Date(item.createTime);
       item.formatTime = `${dateObj.getFullYear()}/${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours()}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
@@ -152,11 +153,55 @@ Page({
       }
       return item;
     });
+    // 🌟 新增逻辑：提取所有日记图的 fileID 走批量缓存链路
+    const allFileIDs = [];
+    formattedList.forEach(item => {
+      if (item.photoList && item.photoList.length > 0) {
+        allFileIDs.push(...item.photoList);
+      } else if (item.photoFileID) {
+        allFileIDs.push(item.photoFileID);
+      }
+    });
+
+    // 过滤出真实的云存储 ID 并去重
+    const cloudIDs = [...new Set(allFileIDs)].filter(id => id && id.startsWith('cloud://'));
+
+    if (cloudIDs.length > 0) {
+      try {
+        // 调用统一的缓存转换工具
+        const urlMap = await getTempFileURLs(cloudIDs);
+        
+        // 将转换后的 URL 赋给专门用来展示的 renderPhotoList
+        formattedList.forEach(item => {
+          item.renderPhotoList = [];
+          if (item.photoList && item.photoList.length > 0) {
+            item.renderPhotoList = item.photoList.map(id => urlMap[id] || id);
+          } else if (item.photoFileID) {
+            item.renderPhotoList = [urlMap[item.photoFileID] || item.photoFileID];
+          }
+        });
+      } catch (err) {
+        console.error('【植光】日记图批量获取 tempURL 失败', err);
+        // 降级处理：获取失败则回退使用原始 fileID
+        this._fallbackRawPhotos(formattedList);
+      }
+    } else {
+      // 如果没有云存储图片，直接沿用原始数组
+      this._fallbackRawPhotos(formattedList);
+    }
 
     const intimacyScore = this.calcIntimacy(formattedList);
     this.setData({ journalList: formattedList, intimacy: intimacyScore });
     this.calculateNextWatering(formattedList);
   },
+
+  // 兜底方法：直接使用原始 ID
+  _fallbackRawPhotos(list) {
+    list.forEach(item => {
+      item.renderPhotoList = item.photoList || (item.photoFileID ? [item.photoFileID] : []);
+    });
+  },
+
 
   // 亲密度计算
   calcIntimacy(journals) {
@@ -426,22 +471,36 @@ Page({
       title: '删除记录',
       content: '确定删除这条养护记录吗？',
       confirmColor: '#EF4444',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return;
         wx.showLoading({ title: '删除中...' });
-        db.collection('journals').doc(id).remove()
-          .then(() => {
-            wx.hideLoading();
-            wx.showToast({ title: '已删除', icon: 'success' });
-            const journalList = this.data.journalList.filter((_, i) => i !== index);
-            const intimacyScore = this.calcIntimacy(journalList);
-            this.setData({ journalList, intimacy: intimacyScore });
-          })
-          .catch(err => {
-            wx.hideLoading();
-            wx.showToast({ title: '删除失败', icon: 'none' });
-            console.error(err);
+        const app = getApp();
+
+        try {
+          const result = await wx.cloud.callFunction({
+            name: 'deleteJournal',
+            data: { journalId: id }
           });
+
+          if (!result.result.success) {
+            throw new Error(result.result.message);
+          }
+
+          // 直接用云函数返回的原始 cloud:// fileID 失效缓存
+          const deletedPhotos = result.result.deletedPhotos || [];
+          if (deletedPhotos.length > 0) invalidateCache(deletedPhotos);
+
+          app.globalData.needRefreshIndex = true;
+          wx.hideLoading();
+          wx.showToast({ title: '已删除', icon: 'success' });
+          const journalList = this.data.journalList.filter((_, i) => i !== index);
+          const intimacyScore = this.calcIntimacy(journalList);
+          this.setData({ journalList, intimacy: intimacyScore });
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: '删除失败', icon: 'none' });
+          console.error('deleteJournal failed:', err);
+        }
       }
     });
   },
@@ -451,72 +510,37 @@ Page({
       title: '确认删除',
       content: '删除后数据将无法恢复，确定吗？',
       confirmColor: '#EF4444',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return;
-        
-        // ✅ 设置全局刷新标志，删除后返回首页时刷新
+
         const app = getApp();
         app.globalData.needRefreshIndex = true;
-        
         wx.showLoading({ title: '删除中...' });
-        
-        // ✅ 修复：删除时同步清理云存储文件
-        const fileIDs = [];
-        
-        db.collection('journals')
-          .where({ plantId: this.data.plantId })
-          .get()
-          .then(journalRes => {
-            // 收集日记中的所有图片文件ID
-            journalRes.data.forEach(j => {
-              if (j.photoList && Array.isArray(j.photoList)) {
-                fileIDs.push(...j.photoList);
-              }
-              if (j.photoFileID && j.photoFileID.startsWith('cloud://')) {
-                fileIDs.push(j.photoFileID);
-              }
-            });
-            
-            // 删除所有日记数据库记录
-            const tasks = journalRes.data.map(j => db.collection('journals').doc(j._id).remove());
-            return Promise.all(tasks);
-          })
-          .then(() => {
-            // 收集植物的所有图片文件ID
-            const { plantInfo } = this.data;
-            if (plantInfo) {
-              if (plantInfo.photoList && Array.isArray(plantInfo.photoList)) {
-                fileIDs.push(...plantInfo.photoList);
-              }
-              if (plantInfo.photoFileID && plantInfo.photoFileID.startsWith('cloud://')) {
-                fileIDs.push(plantInfo.photoFileID);
-              }
-            }
-            
-            // 删除植物数据库记录
-            return db.collection('plants').doc(this.data.plantId).remove();
-          })
-          .then(() => {
-            // 删除云存储文件（去重）
-            const uniqueFileIDs = [...new Set(fileIDs)].filter(id => id && id.startsWith('cloud://'));
-            if (uniqueFileIDs.length > 0) {
-              return wx.cloud.deleteFile({
-                fileList: uniqueFileIDs
-              }).catch(err => {
-                console.warn('【植光】云存储文件清理失败（不影响删除）:', err);
-              });
-            }
-          })
-          .then(() => {
-            wx.hideLoading();
-            wx.showToast({ title: '已删除' });
-            setTimeout(() => wx.navigateBack(), 1500);
-          })
-          .catch(err => {
-            wx.hideLoading();
-            console.error('【植光】删除失败:', err);
-            wx.showToast({ title: '删除失败，请重试', icon: 'none' });
+
+        try {
+          const result = await wx.cloud.callFunction({
+            name: 'deletePlant',
+            data: { plantId: this.data.plantId }
           });
+
+          if (!result.result.success) {
+            throw new Error(result.result.message);
+          }
+
+          // 云函数返回的是原始 cloud:// fileID，用于正确失效缓存
+          const deletedPhotos = result.result.deletedPhotos || [];
+          if (deletedPhotos.length > 0) {
+            invalidateCache(deletedPhotos);
+          }
+
+          wx.hideLoading();
+          wx.showToast({ title: '已删除' });
+          setTimeout(() => wx.navigateBack(), 1500);
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: '删除失败，请重试', icon: 'none' });
+          console.error('deletePlant failed:', err);
+        }
       }
     });
   },

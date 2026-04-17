@@ -1,0 +1,9 @@
+{
+  "name": "getIndexData",
+  "version": "1.0.0",
+  "description": "首页数据聚合云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

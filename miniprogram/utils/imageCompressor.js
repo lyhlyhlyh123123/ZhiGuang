@@ -116,29 +116,29 @@ function compressImages(tempFilePaths, options = {}) {
 const COMPRESS_PRESETS = {
   // 列表缩略图（高压缩）
   thumbnail: {
-    quality: 60,
-    maxWidth: 600,
-    maxHeight: 600
+    quality: 50,
+    maxWidth: 480,
+    maxHeight: 480
   },
-  
+
   // 详情页展示（中等压缩）
   display: {
-    quality: 80,
-    maxWidth: 1200,
-    maxHeight: 1600
+    quality: 72,
+    maxWidth: 1080,
+    maxHeight: 1440
   },
-  
+
   // 高清保存（低压缩）
   highQuality: {
-    quality: 90,
-    maxWidth: 1920,
-    maxHeight: 2560
+    quality: 82,
+    maxWidth: 1600,
+    maxHeight: 2133
   },
-  
+
   // 头像（固定尺寸）
   avatar: {
-    quality: 75,
-    compressedWidth: 400
+    quality: 70,
+    compressedWidth: 320
   }
 };
 
@@ -173,16 +173,16 @@ function smartCompress(tempFilePath) {
         let options;
         if (sizeMB > 5) {
           // 超大图片（>5MB）- 高压缩
-          options = { quality: 60, maxWidth: 1000, maxHeight: 1400 };
+          options = { quality: 50, maxWidth: 900, maxHeight: 1200 };
         } else if (sizeMB > 2) {
           // 大图片（2-5MB）- 中等压缩
-          options = { quality: 75, maxWidth: 1200, maxHeight: 1600 };
+          options = { quality: 65, maxWidth: 1080, maxHeight: 1440 };
         } else if (sizeMB > 0.5) {
           // 中等图片（0.5-2MB）- 轻度压缩
-          options = { quality: 85, maxWidth: 1400, maxHeight: 1800 };
+          options = { quality: 75, maxWidth: 1200, maxHeight: 1600 };
         } else {
           // 小图片（<0.5MB）- 几乎不压缩
-          options = { quality: 90, maxWidth: 1600, maxHeight: 2000 };
+          options = { quality: 82, maxWidth: 1440, maxHeight: 1920 };
         }
         
         compressImage(tempFilePath, options).then(resolve).catch(reject);

@@ -1,6 +1,7 @@
 // pages/batch/batch.js
-const db = wx.cloud.database();
 const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
+const { getCoverPhoto } = require('../../utils/imageHelper.js');
+const { getTempFileURLs } = require('../../utils/imageCache.js');
 
 Page({
   data: {
@@ -54,13 +55,44 @@ Page({
     const app = getApp();
     app.silentLogin().then(() => {
       wx.cloud.callFunction({ name: 'getMyPlants' })
-        .then(res => {
-          const plants = (res.result && res.result.plants) || [];
+        .then(async res => { // ⚠️ 注意：这里必须加上 async
+          let plants = (res.result && res.result.plants) || [];
+          
+          // ==========================================
+          // 🌟 高收益优化：批量提取封面图，走缓存网络
+          // ==========================================
+          const rawIDs = plants.map(p => getCoverPhoto(p));
+          const cloudIDs = rawIDs.filter(id => typeof id === 'string' && id.startsWith('cloud://'));
+          
+          if (cloudIDs.length > 0) {
+            try {
+              const urlArray = await getTempFileURLs(cloudIDs);
+              const urlMap = urlArray.reduce((acc, curr) => {
+                acc[curr.fileID] = curr.tempFileURL;
+                return acc;
+              }, {});
+              // 将 http 链接赋给专门用于展示的 renderCover 字段
+              plants = plants.map((p, index) => ({
+                ...p,
+                renderCover: urlMap[rawIDs[index]] || rawIDs[index]
+              }));
+            } catch (err) {
+              console.warn('【植光】批量页提取缓存失败，降级原图', err);
+              plants = plants.map((p, index) => ({ ...p, renderCover: rawIDs[index] }));
+            }
+          } else {
+             plants = plants.map((p, index) => ({ ...p, renderCover: rawIDs[index] }));
+          }
+          // ==========================================
+
           // 提取品种和地点标签（去重）
           const speciesSet = new Set(plants.map(p => p.species).filter(Boolean));
           const locationSet = new Set(plants.map(p => p.location).filter(Boolean));
+          
           this.setData({
-            plantList: plants, displayList: plants, selectedIds: [],
+            plantList: plants, 
+            displayList: plants, 
+            selectedIds: [],
             speciesList: [...speciesSet],
             locationList: [...locationSet],
             filterSpecies: '', filterLocation: '', batchSearchKey: ''
@@ -177,25 +209,22 @@ Page({
 
     try {
       const selectedActionList = selectedActions.map(a => ({ label: a.label, icon: a.icon }));
-      const hasWater = selectedActions.some(a => a.label === '浇水');
-      const today = new Date(); today.setHours(0, 0, 0, 0);
 
-      const tasks = selectedIds.map(plantId => {
-        const plant = this.data.plantList.find(p => p._id === plantId);
-        const j = db.collection('journals').add({
-          data: {
-            plantId, plantName: plant ? plant.nickname : '',
-            selectedActions: selectedActionList,
-            note: note || '', photoList: [],
-            createTime: db.serverDate(), updateTime: db.serverDate()
-          }
-        });
-        return hasWater ? j.then(() => db.collection('plants').doc(plantId).update({
-          data: { lastWaterDate: today, updateTime: db.serverDate() }
-        })) : j;
+      const app = getApp();
+      await app.silentLogin();
+      const res = await wx.cloud.callFunction({
+        name: 'addBatchJournal',
+        data: {
+          selectedIds,
+          selectedActions: selectedActionList,
+          note: note || ''
+        }
       });
 
-      await Promise.all(tasks);
+      if (!res.result || !res.result.success) {
+        throw new Error((res.result && res.result.message) || '批量记录失败');
+      }
+
       wx.hideLoading();
       wx.showToast({ title: `已记录 ${selectedIds.length} 株`, icon: 'success' });
       // 重置选中状态和备注，actions 恢复默认，自定义标签恢复原始文字

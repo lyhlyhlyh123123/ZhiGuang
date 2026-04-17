@@ -1,5 +1,4 @@
 // pages/index/index.js
-const db = wx.cloud.database();
 const { getCoverPhoto, getPlantPhotos } = require('../../utils/imageHelper.js');
 const { getTempFileURLs, preloadImages } = require('../../utils/imageCache.js');
 const { withAntiRefresh } = require('../../utils/antiRefresh.js');
@@ -143,88 +142,77 @@ Page({
     wx.showNavigationBarLoading();
 
     const app = getApp();
-    app.silentLogin().then(() => {
-      // 并行拉取植物列表（通过云函数，无20条限制）和今日日记
-      const plantsPromise = wx.cloud.callFunction({
-        name: 'getMyPlants'
-      });
-
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const _ = db.command;
-      const journalsPromise = db.collection('journals')
-        .where({ createTime: _.gte(todayStart) })
-        .get();
-
-      Promise.all([plantsPromise, journalsPromise])
-        .then(async ([plantsRes, journalsRes]) => {
-          wx.hideNavigationBarLoading();
-          const rawPlants = (plantsRes.result && plantsRes.result.plants) || [];
-          const todayJournals = journalsRes.data || [];
-
-          // ✅ 收集所有云存储图片ID
-          const cloudFileIDs = rawPlants
-            .map(p => getCoverPhoto(p))
-            .filter(id => id && id.startsWith('cloud://'));
-
-          // ✅ 批量获取临时链接（带缓存优化）
-          let tempURLMap = {};
-          if (cloudFileIDs.length > 0) {
-            try {
-              const tempURLs = await getTempFileURLs(cloudFileIDs);
-              tempURLMap = tempURLs.reduce((map, item) => {
-                map[item.fileID] = item.tempFileURL;
-                return map;
-              }, {});
-            } catch (err) {
-              console.warn('⚠️ 批量获取临时链接失败，使用原始链接:', err);
-            }
-          }
-
-          const allPlants = rawPlants.map(p => {
-            const coverPhoto = getCoverPhoto(p);
-            return {
-              ...p,
-              photoFileID: tempURLMap[coverPhoto] || coverPhoto, // ✅ 使用临时链接或原始链接
-              waterCountdown: this.calcWaterCountdown(p)
-            };
-          });
-
-          // 统计植物科数（去重）
-          const speciesSet = new Set();
-          allPlants.forEach(p => {
-            if (p.species && p.species.trim() !== '' && p.species !== '未知') {
-              speciesSet.add(p.species.trim());
-            }
-          });
-          const speciesCount = speciesSet.size;
-
-          const caredPlantIds = [...new Set(todayJournals.map(j => String(j.plantId)))];
-          const todoPlants = allPlants.filter(p => !caredPlantIds.includes(String(p._id)));
-
-          // 如果没有保留的状态，重置为默认值
-          const shouldResetState = !this._preserveState;
-          this.setData({
-            allPlants,
-            speciesCount, // 设置科数统计
-            todoCount: todoPlants.length,
-            todoPlants,
-            todoAvatars: todoPlants.slice(0, 3), // 只取前3个用于头像展示
-            searchKey: shouldResetState ? '' : this.data.searchKey,
-            page: shouldResetState ? 1 : this.data.page,
-            isTodoFilter: shouldResetState ? false : this.data.isTodoFilter
-          });
-          this._preserveState = false; // 使用后重置标志
-          this.applyFilter(this.data.searchKey || (this.data.isTodoFilter ? 'TODO_CHECKIN' : ''));
-        })
-        .catch(err => {
-          wx.hideNavigationBarLoading();
-          console.error('【植光】获取植物列表失败', err);
-          wx.showToast({ title: '加载失败', icon: 'none' });
-        })
-        .finally(() => {
-          this._fetching = false; // ✅ 释放请求锁
+    app.silentLogin().then(async () => {
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'getIndexData'
         });
+
+        wx.hideNavigationBarLoading();
+        const rawPlants = (res.result && res.result.plants) || [];
+        const todayJournals = (res.result && res.result.todayJournals) || [];
+
+        // ✅ 收集所有云存储图片ID
+        const cloudFileIDs = rawPlants
+          .map(p => getCoverPhoto(p))
+          .filter(id => id && id.startsWith('cloud://'));
+
+        // ✅ 批量获取临时链接（带缓存优化）
+        let tempURLMap = {};
+        if (cloudFileIDs.length > 0) {
+          try {
+            const tempURLs = await getTempFileURLs(cloudFileIDs);
+            tempURLMap = tempURLs.reduce((map, item) => {
+              map[item.fileID] = item.tempFileURL;
+              return map;
+            }, {});
+          } catch (err) {
+            console.warn('⚠️ 批量获取临时链接失败，使用原始链接:', err);
+          }
+        }
+
+        const allPlants = rawPlants.map(p => {
+          const coverPhoto = getCoverPhoto(p);
+          return {
+            ...p,
+            photoFileID: tempURLMap[coverPhoto] || coverPhoto, // ✅ 使用临时链接或原始链接
+            waterCountdown: this.calcWaterCountdown(p)
+          };
+        });
+
+        // 统计植物科数（去重）
+        const speciesSet = new Set();
+        allPlants.forEach(p => {
+          if (p.species && p.species.trim() !== '' && p.species !== '未知') {
+            speciesSet.add(p.species.trim());
+          }
+        });
+        const speciesCount = speciesSet.size;
+
+        const caredPlantIds = [...new Set(todayJournals.map(j => String(j.plantId)))];
+        const todoPlants = allPlants.filter(p => !caredPlantIds.includes(String(p._id)));
+
+        // 如果没有保留的状态，重置为默认值
+        const shouldResetState = !this._preserveState;
+        this.setData({
+          allPlants,
+          speciesCount, // 设置科数统计
+          todoCount: todoPlants.length,
+          todoPlants,
+          todoAvatars: todoPlants.slice(0, 3), // 只取前3个用于头像展示
+          searchKey: shouldResetState ? '' : this.data.searchKey,
+          page: shouldResetState ? 1 : this.data.page,
+          isTodoFilter: shouldResetState ? false : this.data.isTodoFilter
+        });
+        this._preserveState = false; // 使用后重置标志
+        this.applyFilter(this.data.searchKey || (this.data.isTodoFilter ? 'TODO_CHECKIN' : ''));
+      } catch (err) {
+        wx.hideNavigationBarLoading();
+        console.error('【植光】获取植物列表失败', err);
+        wx.showToast({ title: '加载失败', icon: 'none' });
+      } finally {
+        this._fetching = false; // ✅ 释放请求锁
+      }
     });
   },
 

@@ -1,4 +1,5 @@
 const app = getApp();
+const { compressWithPreset } = require('../../utils/imageCompressor.js');
 
 Page({
   data: {
@@ -59,8 +60,9 @@ Page({
     try {
       let finalAvatarUrl = tempAvatarUrl;
       if (tempAvatarUrl.startsWith('http://tmp') || tempAvatarUrl.startsWith('wxfile://')) {
+        const compressed = await compressWithPreset(tempAvatarUrl, 'avatar');
         const cloudPath = `avatars/${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
-        const uploadRes = await wx.cloud.uploadFile({ cloudPath, filePath: tempAvatarUrl });
+        const uploadRes = await wx.cloud.uploadFile({ cloudPath, filePath: compressed });
         finalAvatarUrl = uploadRes.fileID;
       }
 

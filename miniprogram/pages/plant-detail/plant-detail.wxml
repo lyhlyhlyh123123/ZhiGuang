@@ -187,10 +187,10 @@
       <view class="timeline-item" wx:for="{{journalList}}" wx:key="_id">
         <view class="timeline-axis">
           <view class="timeline-line"></view>
-          <view class="timeline-dot {{item.photoFileID || (item.photoList && item.photoList.length > 0) ? 'bg-blue' : 'bg-green'}}">
-            <text wx:if="{{item.photoFileID || (item.photoList && item.photoList.length > 0)}}" class="icon icon-image"></text>
-            <text wx:else class="icon icon-jilu"></text>
-          </view>
+            <view class="timeline-dot {{item.renderPhotoList && item.renderPhotoList.length > 0 ? 'bg-blue' : 'bg-green'}}">
+                <text wx:if="{{item.renderPhotoList && item.renderPhotoList.length > 0}}" class="icon icon-image"></text>
+                <text wx:else class="icon icon-jilu"></text>
+            </view>
         </view>
         <view class="timeline-content">
           <view class="timeline-card" bindlongpress="{{isOwner ? 'deleteJournal' : ''}}" data-id="{{item._id}}" data-index="{{index}}">
@@ -207,17 +207,11 @@
             </view>
             <text class="action-note" wx:if="{{item.note}}">{{item.note}}</text>
             
-            <view class="photo-preview" wx:if="{{item.photoList && item.photoList.length > 0}}">
-              <view class="journal-img-wrapper" wx:for="{{item.photoList}}" wx:for-item="img" wx:key="*this" bindtap="previewJournalImg" data-current="{{img}}" data-list="{{item.photoList}}">
-                <image class="journal-img" src="{{img}}" mode="aspectFill"></image>
-              </view>
+            <view class="photo-preview" wx:if="{{item.renderPhotoList && item.renderPhotoList.length > 0}}">
+                <view class="journal-img-wrapper" wx:for="{{item.renderPhotoList}}" wx:for-item="img" wx:key="*this" bindtap="previewJournalImg" data-current="{{img}}" data-list="{{item.renderPhotoList}}">
+                  <image class="journal-img" src="{{img}}" mode="aspectFill"></image>
+                </view>
             </view>
-            <view class="photo-preview" wx:elif="{{item.photoFileID}}">
-              <view class="journal-img-wrapper" bindtap="previewJournalImg" data-current="{{item.photoFileID}}" data-list="{{[item.photoFileID]}}">
-                <image class="journal-img" src="{{item.photoFileID}}" mode="aspectFill"></image>
-              </view>
-            </view>
-
           </view>
         </view>
       </view>

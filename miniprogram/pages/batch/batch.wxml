@@ -31,7 +31,7 @@
         bindtap="togglePlant" data-id="{{item._id}}"
       >
         <view class="scroll-img-wrap">
-          <image class="scroll-img" src="{{item.photoFileID}}" mode="aspectFill"></image>
+          <image class="scroll-img" src="{{item.renderCover}}" mode="aspectFill"></image>
         </view>
         <text class="scroll-name">{{item.nickname}}</text>
         <text class="scroll-sub" wx:if="{{item.species || item.location}}">{{item.species}}{{item.species && item.location ? ' · ' : ''}}{{item.location}}</text>

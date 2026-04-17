@@ -1,4 +1,3 @@
-const db = wx.cloud.database();
 const { smartCompress } = require('../../utils/imageCompressor.js');
 const { invalidateCache } = require('../../utils/imageCache.js');
 
@@ -272,7 +271,7 @@ Page({
     if (this._submitting) return;
     this._submitting = true;
 
-    const { note, tempImagePaths, plantId, editMode, journalId } = this.data;
+    const { note, tempImagePaths, plantId, editMode, journalId, originalPhotoList } = this.data;
     const selectedActions = this.data.actions.filter(a => a.selected);
 
     // 动作、图片、文字三选一即可
@@ -296,23 +295,22 @@ Page({
 
     try {
       let fileIDs = [];
-      
-      // 编辑模式：区分新增图片和原有图片
+      let newFileIDs = [];
+      let deletedPhotos = [];
+
       if (editMode) {
-        const originalPhotos = this.data.originalPhotoList || [];
+        const originalPhotos = originalPhotoList || [];
         const newPhotos = [];
         const keptPhotos = [];
-        
-        // 区分哪些是原有的云文件，哪些是新选的本地文件
+
         tempImagePaths.forEach(path => {
           if (path.startsWith('cloud://')) {
-            keptPhotos.push(path);  // 保留的原有图片
+            keptPhotos.push(path);
           } else {
-            newPhotos.push(path);   // 新增的本地图片
+            newPhotos.push(path);
           }
         });
-        
-        // 上传新增的图片
+
         if (newPhotos.length > 0) {
           const uploadTasks = newPhotos.map((path, index) => {
             const cloudPath = `journal/${Date.now()}-${index}-${Math.floor(Math.random() * 100000)}.jpg`;
@@ -320,13 +318,11 @@ Page({
           });
 
           const uploadResults = await Promise.allSettled(uploadTasks);
-          
-          const newFileIDs = uploadResults
+          newFileIDs = uploadResults
             .filter(r => r.status === 'fulfilled')
             .map(r => r.value.fileID);
-          
+
           const failedCount = uploadResults.filter(r => r.status === 'rejected').length;
-          
           if (failedCount > 0) {
             wx.showToast({
               title: `${failedCount}张图片上传失败`,
@@ -335,24 +331,18 @@ Page({
             });
             await new Promise(resolve => setTimeout(resolve, 2000));
           }
-          
-          fileIDs = [...keptPhotos, ...newFileIDs];
-        } else {
-          fileIDs = keptPhotos;
         }
-        
-        // 删除被移除的图片
-        const deletedPhotos = originalPhotos.filter(photo => !keptPhotos.includes(photo));
+
+        let newFileIDIndex = 0;
+        fileIDs = tempImagePaths.map(path => {
+          if (path.startsWith('cloud://')) return path;
+          return newFileIDs[newFileIDIndex++] || null;
+        }).filter(Boolean);
+        deletedPhotos = (originalPhotoList || []).filter(photo => !fileIDs.includes(photo));
         if (deletedPhotos.length > 0) {
           invalidateCache(deletedPhotos);
-          wx.cloud.deleteFile({
-            fileList: deletedPhotos
-          }).catch(err => {
-            console.warn('【植光】清理旧图片失败（不影响主流程）:', err);
-          });
         }
       } else {
-        // 新增模式：上传所有图片
         if (tempImagePaths.length > 0) {
           const uploadTasks = tempImagePaths.map((path, index) => {
             const cloudPath = `journal/${Date.now()}-${index}-${Math.floor(Math.random() * 100000)}.jpg`;
@@ -360,13 +350,11 @@ Page({
           });
 
           const uploadResults = await Promise.allSettled(uploadTasks);
-          
           fileIDs = uploadResults
             .filter(r => r.status === 'fulfilled')
             .map(r => r.value.fileID);
-          
+
           const failedCount = uploadResults.filter(r => r.status === 'rejected').length;
-          
           if (failedCount > 0) {
             wx.showToast({
               title: `${failedCount}张图片上传失败`,
@@ -375,6 +363,7 @@ Page({
             });
             await new Promise(resolve => setTimeout(resolve, 2000));
           }
+          newFileIDs = fileIDs;
         }
       }
 
@@ -382,86 +371,71 @@ Page({
         label: a.label,
         icon: a.icon
       }));
-
-      // 获取创建时间
       const createTime = this.getCreateTime();
+      const createTimeValue = createTime.toISOString();
 
       if (editMode) {
-        // 更新现有日记
-        await db.collection('journals').doc(journalId).update({
+        const updateResult = await wx.cloud.callFunction({
+          name: 'updateJournal',
           data: {
+            journalId,
             selectedActions: selectedActionList,
-            note: this.data.note,
+            note: note,
             photoList: fileIDs,
-            createTime: createTime,  // 更新创建时间
-            updateTime: db.serverDate()
+            createTime: createTimeValue,
+            deletedPhotos,
+            newFileIDs
           }
         });
+
+        if (!updateResult.result.success) {
+          throw new Error(updateResult.result.message);
+        }
 
         wx.hideLoading();
         wx.showToast({ title: '更新成功' });
         this._submitting = false;
-        
         setTimeout(() => wx.navigateBack(), 1500);
       } else {
-        // 新增日记
-        let journalAdded = false;
-        try {
-          await db.collection('journals').add({
-            data: {
-              plantId: this.data.plantId,
-              plantName: this.data.plantName,
-              selectedActions: selectedActionList,
-              note: this.data.note,
-              photoList: fileIDs,
-              createTime: createTime,  // 使用用户选择的时间或当前时间
-              updateTime: db.serverDate()
-            }
-          });
-          journalAdded = true;
+        const addResult = await wx.cloud.callFunction({
+          name: 'addJournal',
+          data: {
+            plantId,
+            selectedActions: selectedActionList,
+            note: note,
+            photoList: fileIDs,
+            createTime: createTimeValue,
+            newFileIDs
+          }
+        });
 
-          // 如果本次有浇水动作，重置植物的 lastWaterDate
-          const hasWater = selectedActions.some(a => a.label === '浇水');
-          if (hasWater) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            await db.collection('plants').doc(this.data.plantId).update({
-              data: { lastWaterDate: today, updateTime: db.serverDate() }
-            });
-          }
-        } catch (dbErr) {
-          // 数据库操作失败，删除已上传的图片
-          if (fileIDs.length > 0) {
-            wx.cloud.deleteFile({
-              fileList: fileIDs
-            }).catch(() => {
-              console.warn('【植光】清理图片失败（不影响主流程）');
-            });
-          }
-          throw dbErr;
+        if (!addResult.result.success) {
+          throw new Error(addResult.result.message);
         }
 
         wx.hideLoading();
         wx.showToast({ title: '记录成功' });
         this._submitting = false;
-        
-        // 恢复自定义标签的原始文字
+
         const resetActions = this.data.actions.map(a => {
           if (a.isCustom) {
             return { ...a, label: '自定义', selected: false };
           }
-          return a;
+          return { ...a, selected: false };
         });
         this.setData({ actions: resetActions });
-        
+
         setTimeout(() => wx.navigateBack(), 1500);
       }
-
     } catch (err) {
       this._submitting = false;
       wx.hideLoading();
       wx.showToast({ title: editMode ? '更新失败，请重试' : '保存失败，请重试', icon: 'none' });
       console.error('【植光】保存日记失败:', err);
+      // 清理本次已上传但未入库的孤儿图片
+      if (newFileIDs && newFileIDs.length > 0) {
+        wx.cloud.deleteFile({ fileList: newFileIDs }).catch(() => {});
+      }
     }
   },
 

@@ -9,22 +9,26 @@ exports.main = async (event) => {
     return { success: false, error: '内容不能为空' };
   }
 
-  // ✅ 修复：使用环境变量存储敏感信息（需在云函数配置中设置）
-  // TODO: 在云开发控制台 -> 云函数 -> sendFeedback -> 配置 中添加环境变量：
-  // SMTP_USER=你的邮箱
-  // SMTP_PASS=你的授权码
+  const SMTP_USER = process.env.SMTP_USER;
+  const SMTP_PASS = process.env.SMTP_PASS;
+  const FEEDBACK_TO = process.env.FEEDBACK_TO || SMTP_USER;
+
+  if (!SMTP_USER || !SMTP_PASS) {
+    console.error('sendFeedback 配置缺失: SMTP_USER/SMTP_PASS');
+    return { success: false, error: '服务配置缺失，请联系管理员' };
+  }
+
   const transporter = nodemailer.createTransport({
     host: 'smtp.qq.com',
     port: 465,
     secure: true,
     auth: {
-      user: process.env.SMTP_USER || '2971665141@qq.com', // 临时兼容，建议配置环境变量
-      pass: process.env.SMTP_PASS || 'fhrkdesqhqexdfee'   // 临时兼容，建议配置环境变量
+      user: SMTP_USER,
+      pass: SMTP_PASS
     }
   });
 
   try {
-    // 修复时区问题：明确指定中国时区
     const now = new Date();
     const timeStr = now.toLocaleString('zh-CN', {
       timeZone: 'Asia/Shanghai',
@@ -36,10 +40,10 @@ exports.main = async (event) => {
       second: '2-digit',
       hour12: false
     });
-    
+
     await transporter.sendMail({
-      from: '"植光反馈" <2971665141@qq.com>',
-      to: '2971665141@qq.com',
+      from: `"植光反馈" <${SMTP_USER}>`,
+      to: FEEDBACK_TO,
       subject: '【植光】用户意见反馈',
       text: `反馈内容：\n${content}\n\n提交时间：${timeStr}`
     });

@@ -1,5 +1,4 @@
 // pages/edit-plant/edit-plant.js
-const db = wx.cloud.database();
 const { uploadImages, getPlantPhotos } = require('../../utils/imageHelper.js');
 const { smartCompress } = require('../../utils/imageCompressor.js');
 const { invalidateCache } = require('../../utils/imageCache.js');
@@ -42,25 +41,25 @@ Page({
   },
 
   // 拉取植物数据
-  fetchOldData(id) {
+  async fetchOldData(id) {
     wx.showLoading({ title: '加载资料...' });
-    db.collection('plants').doc(id).get().then(res => {
-      wx.hideLoading();
-      const data = res.data;
-      
-      // 校验权限
-      const app = getApp();
-      const openid = app.globalData.openid;
-      if (openid && data._openid && data._openid !== openid) {
-        wx.showToast({ title: '无权编辑此植物', icon: 'none' });
-        setTimeout(() => wx.navigateBack(), 1500);
-        return;
+
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'getMyPlantForEdit',
+        data: { plantId: id }
+      });
+
+      if (!result.result.success) {
+        throw new Error(result.result.message);
       }
-      
+
+      const data = result.result.data;
+
       // 获取图片列表（兼容新旧数据）
       const photos = getPlantPhotos(data);
       const imageList = photos.map(url => ({ url, isCloud: true }));
-      
+
       this.setData({
         nickname: data.nickname,
         species: data.species,
@@ -72,11 +71,13 @@ Page({
         imageList: imageList,
         originalPhotoList: photos
       });
-    }).catch(err => {
+
+      wx.hideLoading();
+    } catch (err) {
       wx.hideLoading();
       console.error('【植光】加载植物资料失败:', err);
       wx.showToast({ title: '加载失败，请返回重试', icon: 'none' });
-    });
+    }
   },
 
   onDateChange(e) {
@@ -342,89 +343,85 @@ Page({
     }
 
     wx.showLoading({ title: '更新中...' });
+    let uploadedFileIDs = [];
 
     try {
-      // 分离云端图片和本地新增图片
-      const cloudPhotos = imageList.filter(img => img.isCloud).map(img => img.url);
       const localPhotos = imageList.filter(img => !img.isCloud).map(img => img.url);
-      
-      // 上传新增的本地图片
-      let newFileIDs = [];
-      if (localPhotos.length > 0) {
-        const uploadResult = await uploadImages(localPhotos, 'plant-photos', true);
-        newFileIDs = uploadResult.success;
 
-        // ✅ 修复：如果有图片上传失败，提示用户
-        if (uploadResult.failed > 0) {
-          wx.showToast({
-            title: `${uploadResult.failed}张新图片上传失败`,
-            icon: 'none',
-            duration: 2000
-          });
-          await new Promise(resolve => setTimeout(resolve, 2000));
+      // 新增本地图片先在前端上传，避免把手机本地路径传到云函数
+      if (localPhotos.length > 0) {
+        // 图片已在选图时经过 smartCompress，此处直接上传不重复压缩
+        const uploadResult = await uploadImages(localPhotos, 'plant-photos', false);
+        uploadedFileIDs = uploadResult.success || [];
+
+        if (uploadResult.failed > 0 || uploadedFileIDs.length !== localPhotos.length) {
+          if (uploadedFileIDs.length > 0) {
+            await wx.cloud.deleteFile({ fileList: uploadedFileIDs }).catch(() => {});
+            uploadedFileIDs = [];
+          }
+          throw new Error('图片上传失败，请重试');
         }
       }
-      
-      // 重建完整的 photoList（按当前顺序）
-      let photoIndex = 0;
-      const finalPhotoList = imageList.map(img => {
-        if (img.isCloud) {
-          return img.url;
-        } else {
-          // 如果对应的新图片上传失败，跳过
-          return newFileIDs[photoIndex++];
-        }
-      }).filter(Boolean); // 过滤掉 undefined
-      
-      // ✅ 修复：找出被删除的图片并清理云存储
-      const deletedPhotos = (originalPhotoList || []).filter(
-        oldPhoto => !finalPhotoList.includes(oldPhoto) && oldPhoto.startsWith('cloud://')
-      );
-      
-      // 更新数据库
-      await db.collection('plants').doc(plantId).update({
+
+      // 构建最终图片列表：云端旧图 + 新上传fileID（保持原顺序）
+      let localIndex = 0;
+      const completePhotoList = imageList
+        .map(img => (img.isCloud ? img.url : (uploadedFileIDs[localIndex++] || '')))
+        .filter(Boolean);
+
+      // 调用云函数更新植物
+      const updateResult = await wx.cloud.callFunction({
+        name: 'updatePlant',
         data: {
+          plantId,
           nickname,
           species,
           location,
-          source,
-          remark,
+          source: source || '',
+          remark: remark || '',
           adoptDate,
           waterInterval,
-          photoList: finalPhotoList,
-          photoFileID: finalPhotoList[0] || '', // 兼容
-          updateTime: db.serverDate()
+          finalPhotoList: completePhotoList,
+          originalPhotoList: originalPhotoList || []
         }
       });
 
-      // ✅ 修复：数据库更新成功后再清理被删除的图片
-      if (deletedPhotos.length > 0) {
-        // 失效被删除图片的本地缓存
-        invalidateCache(deletedPhotos);
-        wx.cloud.deleteFile({
-          fileList: deletedPhotos
-        }).catch(err => {
-          console.warn('【植光】清理图片失败（不影响主流程）:', err);
-        });
+      if (!updateResult.result.success) {
+        if (uploadedFileIDs.length > 0) {
+          await wx.cloud.deleteFile({ fileList: uploadedFileIDs }).catch(() => {});
+          uploadedFileIDs = [];
+        }
+        throw new Error(updateResult.result.message);
       }
 
       // ✅ 优化：保存成功后立即设置首页刷新标志
       const app = getApp();
       app.globalData.needRefreshIndex = true;
 
+      // 只失效被删除的图片缓存，保留未变动图片的缓存
+      const deletedPhotos = (originalPhotoList || []).filter(
+        id => !completePhotoList.includes(id) && id && id.startsWith('cloud://')
+      );
+      if (deletedPhotos.length > 0) {
+        invalidateCache(deletedPhotos);
+      }
+
       wx.hideLoading();
       this._submitting = false;
       wx.showToast({ title: '修改成功！', icon: 'success', duration: 1000 });
-      
+
       // ✅ 优化：缩短延迟时间，提升响应速度
       setTimeout(() => {
         wx.navigateBack({ delta: 1 });
       }, 1000);
 
     } catch (err) {
+      if (uploadedFileIDs.length > 0) {
+        await wx.cloud.deleteFile({ fileList: uploadedFileIDs }).catch(() => {});
+      }
       this._submitting = false;
       wx.hideLoading();
-      wx.showToast({ title: '更新失败', icon: 'error' });
+      wx.showToast({ title: err.message || '更新失败', icon: 'none' });
       console.error('【植光】更新失败:', err);
     }
   },
