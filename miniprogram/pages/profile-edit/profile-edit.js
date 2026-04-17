@@ -66,9 +66,16 @@ Page({
         finalAvatarUrl = uploadRes.fileID;
       }
 
+      const oldAvatarUrl = this.data.userInfo && this.data.userInfo.avatarUrl;
+
       const newUserInfo = { avatarUrl: finalAvatarUrl, nickName: tempNickname };
       app.globalData.userInfo = newUserInfo;
       wx.setStorageSync('userInfo', newUserInfo);
+
+      // 删除旧头像云文件
+      if (oldAvatarUrl && oldAvatarUrl.startsWith('cloud://') && oldAvatarUrl !== finalAvatarUrl) {
+        wx.cloud.deleteFile({ fileList: [oldAvatarUrl] }).catch(() => {});
+      }
 
       wx.hideLoading();
       wx.showToast({ title: '资料同步成功', icon: 'success' });
@@ -87,8 +94,12 @@ Page({
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          // ✅ 使用 app 统一的清理方法，确保状态一致性
+          const oldAvatarUrl = this.data.userInfo && this.data.userInfo.avatarUrl;
           app.clearLoginState();
+          // 退出时删除云存储头像
+          if (oldAvatarUrl && oldAvatarUrl.startsWith('cloud://')) {
+            wx.cloud.deleteFile({ fileList: [oldAvatarUrl] }).catch(() => {});
+          }
           wx.showToast({ title: '已退出', icon: 'success' });
           setTimeout(() => wx.navigateBack(), 1000);
         }

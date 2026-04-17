@@ -93,9 +93,13 @@
     <!-- 植物卡片网格 -->
     <view class="plant-grid" wx:elif="{{plantList.length > 0}}">
       <view class="plant-card" wx:for="{{plantList}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
-        <!-- 图片区（纯净，无遮挡） -->
+        <!-- 图片区 -->
         <view class="card-img-box">
           <image class="card-img" src="{{item.photoFileID}}" mode="aspectFill" lazy-load binderror="onImageError" data-id="{{item._id}}"></image>
+          <!-- 陪伴天数 badge -->
+          <view class="companion-badge" wx:if="{{item.companionDays !== ''}}">
+            <text class="companion-text">{{item.companionDays}}天</text>
+          </view>
         </view>
         <!-- 信息区 -->
         <view class="card-body">
@@ -113,10 +117,6 @@
           </view>
           <view class="card-divider"></view>
           <view class="card-footer">
-            <view class="card-date-row">
-              <text class="icon icon-riqi card-date-icon"></text>
-              <text class="card-date">{{item.adoptDate}}</text>
-            </view>
             <!-- 浇水倒计时 -->
             <view class="water-badge {{item.waterCountdown <= 0 ? 'water-badge-urgent' : ''}}">
               <text class="icon icon-water water-badge-icon"></text>

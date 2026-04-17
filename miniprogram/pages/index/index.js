@@ -43,6 +43,8 @@ Page({
     const cachedUserInfo = wx.getStorageSync('userInfo');
     if (cachedUserInfo && cachedUserInfo.nickName) {
       this.setData({ userInfo: cachedUserInfo });
+    } else {
+      this.setData({ userInfo: null });
     }
     this.setCurrentDate();
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
@@ -171,12 +173,23 @@ Page({
           }
         }
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         const allPlants = rawPlants.map(p => {
           const coverPhoto = getCoverPhoto(p);
+          let companionDays = '';
+          if (p.adoptDate) {
+            const adopt = new Date(p.adoptDate);
+            adopt.setHours(0, 0, 0, 0);
+            const diff = Math.floor((today - adopt) / (1000 * 60 * 60 * 24));
+            companionDays = diff >= 0 ? diff : 0;
+          }
           return {
             ...p,
-            photoFileID: tempURLMap[coverPhoto] || coverPhoto, // ✅ 使用临时链接或原始链接
-            waterCountdown: this.calcWaterCountdown(p)
+            photoFileID: tempURLMap[coverPhoto] || coverPhoto,
+            waterCountdown: this.calcWaterCountdown(p),
+            companionDays
           };
         });
 

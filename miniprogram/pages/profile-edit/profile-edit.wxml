@@ -8,9 +8,6 @@
     <!-- 头像选择 -->
     <button class="avatar-wrapper" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
       <image class="setup-avatar" src="{{tempAvatarUrl || userInfo.avatarUrl || '/images/avatar.png'}}" mode="aspectFill"></image>
-      <view class="avatar-edit-tag">
-        <text class="icon icon-image"></text>
-      </view>
     </button>
     <text class="hint-text">点击圆圈同步微信头像</text>
     

@@ -164,18 +164,18 @@
     <!-- 养护信息区 -->
     <view class="care-info-section" wx:if="{{plantInfo && plantInfo.waterInterval}}">
       <view class="care-card-item">
-        <text class="care-card-icon iconfont icon-Water"></text>
-        <view class="care-card-content">
+        <view class="care-card-header">
+          <text class="care-card-icon iconfont icon-Water"></text>
           <text class="care-card-label">浇水周期</text>
-          <text class="care-card-value">{{plantInfo.waterInterval}}天/次</text>
         </view>
+        <text class="care-card-value">{{plantInfo.waterInterval}}天/次</text>
       </view>
       <view class="care-card-item">
-        <text class="care-card-icon iconfont icon-riqi"></text>
-        <view class="care-card-content">
+        <view class="care-card-header">
+          <text class="care-card-icon iconfont icon-riqi"></text>
           <text class="care-card-label">下次浇水</text>
-          <text class="care-card-value {{nextWatering.isOverdue ? 'warn' : ''}}">{{nextWatering.text}}</text>
         </view>
+        <text class="care-card-value {{nextWatering.isOverdue ? 'warn' : ''}}">{{nextWatering.text}}</text>
       </view>
     </view>
 
