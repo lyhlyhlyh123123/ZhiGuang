@@ -42,9 +42,9 @@ exports.main = async (event) => {
     });
 
     await transporter.sendMail({
-      from: `"植光反馈" <${SMTP_USER}>`,
+      from: `"小植书反馈" <${SMTP_USER}>`,
       to: FEEDBACK_TO,
-      subject: '【植光】用户意见反馈',
+      subject: '【小植书】用户意见反馈',
       text: `反馈内容：\n${content}\n\n提交时间：${timeStr}`
     });
     return { success: true };

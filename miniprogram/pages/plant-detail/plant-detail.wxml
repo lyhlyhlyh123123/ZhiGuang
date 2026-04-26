@@ -64,7 +64,9 @@
     <view class="plant-info-section" wx:if="{{plantInfo}}">
         <!-- 名字和操作按钮行 -->
         <view class="plant-name-row">
-          <text class="plant-name">{{plantInfo.nickname}}</text>
+          <view style="display:flex;align-items:center;gap:12rpx;flex:1;min-width:0;">
+            <text class="plant-name">{{plantInfo.nickname}}</text>
+          </view>
           <view class="name-actions">
             <!-- 点赞按钮（图标右上角显示数字） -->
             <view class="like-btn-wrapper" bindtap="toggleLike">
@@ -110,7 +112,8 @@
                   <text class="col-icon iconfont icon-calendar"></text>
                   <text class="col-label">陪伴</text>
                 </view>
-                <text class="col-value">{{adoptDays}}天</text>
+                <text wx:if="{{isDead}}" class="col-value col-dead-label">结束陪伴</text>
+                <text wx:else class="col-value">{{adoptDays}}天</text>
               </view>
               <view class="col-item">
                 <view class="col-header">
@@ -156,31 +159,42 @@
     </view>
 
     <!-- 养护信息分隔区 -->
-    <view class="care-divider" wx:if="{{plantInfo && plantInfo.waterInterval}}"></view>
-    
+    <view class="care-divider" wx:if="{{careTasksDisplay.length > 0 && !isDead}}"></view>
+
     <!-- 养护标题 -->
-    <view class="care-title" wx:if="{{plantInfo && plantInfo.waterInterval}}">养护指南</view>
-    
-    <!-- 养护信息区 -->
-    <view class="care-info-section" wx:if="{{plantInfo && plantInfo.waterInterval}}">
-      <view class="care-card-item">
-        <view class="care-card-header">
-          <text class="care-card-icon iconfont icon-Water"></text>
-          <text class="care-card-label">浇水周期</text>
-        </view>
-        <text class="care-card-value">{{plantInfo.waterInterval}}天/次</text>
-      </view>
-      <view class="care-card-item">
-        <view class="care-card-header">
-          <text class="care-card-icon iconfont icon-riqi"></text>
-          <text class="care-card-label">下次浇水</text>
-        </view>
-        <text class="care-card-value {{nextWatering.isOverdue ? 'warn' : ''}}">{{nextWatering.text}}</text>
-      </view>
+    <view class="care-title" wx:if="{{careTasksDisplay.length > 0 && !isDead}}">养护计划</view>
+
+    <!-- 养护信息区（swiper滑动，仅多任务时可滑） -->
+    <view class="care-swiper-wrapper" wx:if="{{careTasksDisplay.length > 0 && !isDead}}">
+      <swiper class="care-swiper" indicator-dots="{{false}}" circular="{{false}}" autoplay="{{false}}">
+        <swiper-item wx:for="{{careTasksDisplay}}" wx:key="name">
+          <view class="care-group">
+            <view class="care-card-item">
+              <view class="care-card-icon-wrap" style="background:{{item.iconBg}};">
+                <text class="care-card-icon iconfont {{item.icon}}" style="color:{{item.iconColor}};"></text>
+              </view>
+              <view class="care-card-text">
+                <text class="care-card-label">{{item.name}}周期</text>
+                <text class="care-card-value">{{item.interval}}天/次</text>
+              </view>
+            </view>
+            <view class="care-card-item">
+              <view class="care-card-icon-wrap" style="background:#FFF7ED;">
+                <text class="iconfont icon-riqi1 care-card-icon" style="color:#F59E0B;font-size:45rpx;"></text>
+              </view>
+              <view class="care-card-text">
+                <text class="care-card-label">下次{{item.name}}</text>
+                <text class="care-card-value {{item.isOverdue ? 'warn' : ''}}">{{item.nextDateStr}}</text>
+              </view>
+            </view>
+          </view>
+        </swiper-item>
+      </swiper>
+      <text wx:if="{{careTasksDisplay.length > 1}}" class="swiper-arrow">›</text>
     </view>
 
     <view class="timeline-header">
-      <text class="timeline-title">养成日记</text>
+      <text class="timeline-title">{{isDead ? '成长回忆' : '养成日记'}}</text>
     </view>
 
     <view class="timeline-list" wx:if="{{journalList.length > 0}}">
@@ -223,7 +237,7 @@
 
   </view>
 
-  <view class="bottom-action-bar" wx:if="{{isOwner}}">
+  <view class="bottom-action-bar" wx:if="{{isOwner && !isDead}}">
     <button class="btn-record" bindtap="openJournalPage">
       <text class="btn-icon icon icon-jilu"></text>
       <text class="btn-text">记录植物成长</text>

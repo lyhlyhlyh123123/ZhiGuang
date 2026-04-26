@@ -19,20 +19,27 @@ exports.main = async (event, context) => {
 
   if (!openid) return { success: false, error: '未获取到用户身份' };
 
+  // excludeDead: true 时只返回存活植物
+  const excludeDead = event && event.excludeDead === true;
+  const _ = db.command;
+  const query = excludeDead
+    ? { _openid: openid, isDead: _.neq(true) }
+    : { _openid: openid };
+
   try {
     const MAX_LIMIT = 100; // 云函数单次最多查 100 条
     let plants = [];
 
     // ✅ 优化：先查总数（利用索引）
     const countRes = await db.collection('plants')
-      .where({ _openid: openid })
+      .where(query)
       .count();
     const total = countRes.total;
 
     // 如果数据量不大，直接一次查询
     if (total <= MAX_LIMIT) {
       const res = await db.collection('plants')
-        .where({ _openid: openid })
+        .where(query)
         .orderBy('createTime', 'desc')
         .limit(MAX_LIMIT)
         .get();
@@ -45,7 +52,7 @@ exports.main = async (event, context) => {
     for (let i = 0; i < batchCount; i++) {
       tasks.push(
         db.collection('plants')
-          .where({ _openid: openid })
+          .where(query)
           .orderBy('createTime', 'desc')
           .skip(i * MAX_LIMIT)
           .limit(MAX_LIMIT)
@@ -56,10 +63,10 @@ exports.main = async (event, context) => {
     const results = await Promise.all(tasks);
     results.forEach(r => { plants = plants.concat(r.data); });
 
-    console.log(`【植光】成功获取 ${plants.length} 条植物数据`);
+    console.log(`【小植书】成功获取 ${plants.length} 条植物数据`);
     return { success: true, plants, total };
   } catch (err) {
-    console.error('【植光】getMyPlants 失败:', err);
+    console.error('【小植书】getMyPlants 失败:', err);
     return { success: false, error: String(err) };
   }
 };

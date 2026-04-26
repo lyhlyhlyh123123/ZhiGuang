@@ -13,7 +13,8 @@ Page({
       { label: '施肥', value: 'fertilize', icon: 'icon-feiliao', selected: false },
       { label: '修剪', value: 'prune', icon: 'icon-Scissors', selected: false },
       { label: '换盆', value: 'repot', icon: 'icon-penzai', selected: false },
-      { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false },
+      { label: '除虫', value: 'pesticide', icon: 'icon-qingkong', selected: false },
+      { label: '杀菌', value: 'fungicide', icon: 'icon-wendu', selected: false },
       { label: '里程碑', value: 'milestone', icon: 'icon-lichengbei', selected: false },
       { label: '自定义', value: 'custom', icon: 'icon-qita', selected: false, isCustom: true }
     ],
@@ -28,6 +29,12 @@ Page({
   },
 
   onShow() {
+    const app = getApp();
+    const forceRefresh = app.globalData.needRefreshBatch;
+    if (forceRefresh) {
+      app.globalData.needRefreshBatch = false;
+      this._lastLoadTime = 0;
+    }
     // 节流：30秒内不重复加载
     const now = Date.now();
     if (!this._lastLoadTime || now - this._lastLoadTime > 30000) {
@@ -54,7 +61,7 @@ Page({
     
     const app = getApp();
     app.silentLogin().then(() => {
-      wx.cloud.callFunction({ name: 'getMyPlants' })
+      wx.cloud.callFunction({ name: 'getMyPlants', data: { excludeDead: true } })
         .then(async res => { // ⚠️ 注意：这里必须加上 async
           let plants = (res.result && res.result.plants) || [];
           
@@ -77,7 +84,7 @@ Page({
                 renderCover: urlMap[rawIDs[index]] || rawIDs[index]
               }));
             } catch (err) {
-              console.warn('【植光】批量页提取缓存失败，降级原图', err);
+              console.warn('【小植书】批量页提取缓存失败，降级原图', err);
               plants = plants.map((p, index) => ({ ...p, renderCover: rawIDs[index] }));
             }
           } else {
@@ -208,7 +215,11 @@ Page({
     wx.showLoading({ title: '批量记录中...' });
 
     try {
-      const selectedActionList = selectedActions.map(a => ({ label: a.label, icon: a.icon }));
+      const selectedActionList = selectedActions.map(a => ({ label: a.label, icon: a.icon, value: a.value }));
+
+      // 传本地时间戳，云函数直接用，避免时区问题
+      const now = new Date();
+      const createTime = now.toISOString();
 
       const app = getApp();
       await app.silentLogin();
@@ -217,6 +228,7 @@ Page({
         data: {
           selectedIds,
           selectedActions: selectedActionList,
+          createTime,
           note: note || ''
         }
       });
@@ -241,7 +253,7 @@ Page({
       wx.showToast({ title: '操作失败，请重试', icon: 'none' });
       // ✅ 修复：统一使用 setData 管理状态，移除冗余的 this._submitting
       this.setData({ submitting: false });
-      console.error('【植光】批量记录失败:', err);
+      console.error('【小植书】批量记录失败:', err);
     }
   }
 });

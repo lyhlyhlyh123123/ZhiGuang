@@ -56,7 +56,7 @@ exports.main = async (event, context) => {
       action: hasLiked ? 'unlike' : 'like'
     };
   } catch (err) {
-    console.error('【植光】toggleLike 失败:', err);
+    console.error('【小植书】toggleLike 失败:', err);
     return {
       success: false,
       error: err.message || String(err)

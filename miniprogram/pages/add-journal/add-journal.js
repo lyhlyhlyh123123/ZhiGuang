@@ -13,7 +13,8 @@ Page({
       { label: '施肥', value: 'fertilize', icon: 'icon-feiliao', selected: false },
       { label: '修剪', value: 'prune', icon: 'icon-Scissors', selected: false },
       { label: '换盆', value: 'repot', icon: 'icon-penzai', selected: false },
-      { label: '除虫', value: 'debug', icon: 'icon-qingkong', selected: false },
+      { label: '除虫', value: 'pesticide', icon: 'icon-qingkong', selected: false },
+      { label: '杀菌', value: 'fungicide', icon: 'icon-wendu', selected: false },
       { label: '里程碑', value: 'milestone', icon: 'icon-lichengbei', selected: false },
       { label: '自定义', value: 'custom', icon: 'icon-qita', selected: false, isCustom: true }
     ],
@@ -54,7 +55,7 @@ Page({
         const journal = JSON.parse(decodeURIComponent(journalData));
         this.loadJournalData(journal);
       } catch (err) {
-        console.error('【植光】解析日记数据失败:', err);
+        console.error('【小植书】解析日记数据失败:', err);
         wx.showToast({ title: '加载日记失败', icon: 'none' });
       }
     }
@@ -155,7 +156,7 @@ Page({
         count: remaining,
         mediaType: ['image'],
         sourceType: ['album', 'camera'],
-        sizeType: ['original'], // ✅ 先选择原图，然后智能压缩
+        sizeType: ['compressed', 'original'],
       });
 
       // ✅ 显示压缩进度
@@ -182,7 +183,7 @@ Page({
       });
     } catch (err) {
       wx.hideLoading();
-      console.error('【植光】选择照片失败:', err);
+      console.error('【小植书】选择照片失败:', err);
     }
   },
 
@@ -369,7 +370,8 @@ Page({
 
       const selectedActionList = selectedActions.map(a => ({
         label: a.label,
-        icon: a.icon
+        icon: a.icon,
+        value: a.value
       }));
       const createTime = this.getCreateTime();
       const createTimeValue = createTime.toISOString();
@@ -431,7 +433,7 @@ Page({
       this._submitting = false;
       wx.hideLoading();
       wx.showToast({ title: editMode ? '更新失败，请重试' : '保存失败，请重试', icon: 'none' });
-      console.error('【植光】保存日记失败:', err);
+      console.error('【小植书】保存日记失败:', err);
       // 清理本次已上传但未入库的孤儿图片
       if (newFileIDs && newFileIDs.length > 0) {
         wx.cloud.deleteFile({ fileList: newFileIDs }).catch(() => {});

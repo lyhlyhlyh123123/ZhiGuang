@@ -52,8 +52,9 @@ exports.main = async (event, context) => {
 
   const db = cloud.database()
   const _ = db.command
-  const start = new Date(year, month - 1, day, 0, 0, 0)
-  const end = new Date(year, month - 1, day + 1, 0, 0, 0)
+  // 北京时间 UTC+8：查询范围要减去8小时偏移
+  const start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0) - 8 * 60 * 60 * 1000)
+  const end = new Date(Date.UTC(year, month - 1, day + 1, 0, 0, 0) - 8 * 60 * 60 * 1000)
 
   try {
     const plantList = await fetchAll(() =>

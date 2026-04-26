@@ -22,7 +22,8 @@ exports.main = async (event, context) => {
   const {
     selectedIds = [],
     selectedActions = [],
-    note = ''
+    note = '',
+    createTime = ''
   } = event
 
   if (!Array.isArray(selectedIds) || selectedIds.length === 0) {
@@ -59,9 +60,17 @@ exports.main = async (event, context) => {
       return { success: false, message: '请选择有效的植物' }
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const hasWater = selectedActions.some(a => a.label === '浇水')
+    // 直接用客户端传来的时间戳，保留真实的北京时间
+    const now = createTime ? new Date(createTime) : new Date()
+    // 用北京时间偏移计算今天的日期字符串（UTC+8）
+    const cst = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+    const todayStr = cst.toISOString().split('T')[0]
+
+    const CARE_TASK_VALUES = ['water', 'fertilize', 'repot', 'prune', 'pesticide', 'fungicide']
+    const actionValues = selectedActions
+      .map(a => a.value)
+      .filter(v => CARE_TASK_VALUES.includes(v))
+    const hasWater = actionValues.includes('water')
 
     const journalAddTasks = selectedIds.map(plantId => {
       const plant = plantMap[plantId]
@@ -72,7 +81,7 @@ exports.main = async (event, context) => {
           selectedActions,
           note: note || '',
           photoList: [],
-          createTime: today,
+          createTime: now,
           updateTime: db.serverDate(),
           _openid: openid
         }
@@ -81,14 +90,25 @@ exports.main = async (event, context) => {
 
     await Promise.all(journalAddTasks)
 
-    if (hasWater) {
+    if (actionValues.length > 0) {
       const plantUpdateTasks = selectedIds.map(plantId => {
-        return db.collection('plants').doc(plantId).update({
-          data: {
-            lastWaterDate: today,
-            updateTime: db.serverDate()
-          }
-        })
+        const plant = plantMap[plantId]
+        const updateData = { updateTime: db.serverDate() }
+
+        // 兼容旧数据
+        if (hasWater) updateData.lastWaterDate = now
+
+        // 更新 careTasks 数组
+        if (plant && plant.careTasks && plant.careTasks.length > 0) {
+          updateData.careTasks = plant.careTasks.map(task => {
+            if (actionValues.includes(task.taskId)) {
+              return { ...task, lastDate: todayStr }
+            }
+            return task
+          })
+        }
+
+        return db.collection('plants').doc(plantId).update({ data: updateData })
       })
       await Promise.all(plantUpdateTasks)
     }

@@ -2,7 +2,8 @@
 const { getCoverPhoto, getPlantPhotos } = require('../../utils/imageHelper.js');
 const { getTempFileURLs, preloadImages } = require('../../utils/imageCache.js');
 const { withAntiRefresh } = require('../../utils/antiRefresh.js');
-const PLANT_QUERY_LIMIT = 100; // 单次查询植物上限
+const { parseCareTasksCompat, calcTaskCountdown } = require('../../utils/careHelper.js');
+const PLANT_QUERY_LIMIT = 100;
 
 // ✅ 配置参数
 const PRELOAD_THRESHOLD = 0.7; // 滚动到70%时预加载下一页
@@ -10,7 +11,10 @@ const PRELOAD_THRESHOLD = 0.7; // 滚动到70%时预加载下一页
 Page({
   data: {
     plantList: [],
+    tapActiveId: '',
     allPlants: [],
+    sortBy: 'createTime', // createTime | adoptDateAsc | adoptDateDesc
+    showSortPanel: false,
     filteredPlants: [],
     searchKey: '',
     page: 1,
@@ -24,7 +28,7 @@ Page({
     todoPlants: [],
     todoAvatars: [],
     isTodoFilter: false,
-    speciesCount: 0, // 植物科数统计
+    speciesCount: 0,
   },
 
   onShow() {
@@ -94,16 +98,31 @@ Page({
     this.setData({ plantList });
   },
 
-  // 计算距离下次浇水还有几天（负数表示已逾期）
-  calcWaterCountdown(plant) {
-    const interval = plant.waterInterval || 7;
-    if (!plant.lastWaterDate) return interval; // 没有记录，返回完整周期
-    const last = new Date(plant.lastWaterDate);
-    last.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffDays = Math.floor((today - last) / (1000 * 60 * 60 * 24));
-    return interval - diffDays;
+  // 计算所有开启的养护任务倒计时列表
+  calcUrgentCareTask(plant) {
+    if (plant.carePlanEnabled === false) return null;
+    const tasks = parseCareTasksCompat(plant);
+    const enabled = tasks.filter(t => t.enabled);
+    if (enabled.length === 0) return null;
+    // 返回最紧急的一项用于首页显示（单个badge）
+    let urgent = null;
+    for (const t of enabled) {
+      const countdown = calcTaskCountdown(t);
+      if (!urgent || countdown < urgent.countdown) {
+        urgent = { name: t.name, countdown, isOverdue: countdown < 0 };
+      }
+    }
+    return urgent;
+  },
+
+  // 计算所有开启的养护任务（用于卡片多badge展示）
+  calcCareBadges(plant) {
+    if (plant.carePlanEnabled === false) return [];
+    const tasks = parseCareTasksCompat(plant);
+    return tasks.filter(t => t.enabled).map(t => {
+      const countdown = calcTaskCountdown(t);
+      return { name: t.name, icon: t.icon, countdown, isOverdue: countdown < 0 };
+    }).sort((a, b) => a.countdown - b.countdown);
   },
 
   // 去云端拉取植物列表的方法（带防刷新保护）
@@ -179,17 +198,26 @@ Page({
         const allPlants = rawPlants.map(p => {
           const coverPhoto = getCoverPhoto(p);
           let companionDays = '';
+          let totalDays = '';
           if (p.adoptDate) {
             const adopt = new Date(p.adoptDate);
             adopt.setHours(0, 0, 0, 0);
-            const diff = Math.floor((today - adopt) / (1000 * 60 * 60 * 24));
-            companionDays = diff >= 0 ? diff : 0;
+            if (p.isDead && p.deadDate) {
+              const dead = new Date(p.deadDate);
+              dead.setHours(0, 0, 0, 0);
+              totalDays = Math.max(0, Math.floor((dead - adopt) / (1000 * 60 * 60 * 24)));
+            } else {
+              const diff = Math.floor((today - adopt) / (1000 * 60 * 60 * 24));
+              companionDays = diff >= 0 ? diff : 0;
+            }
           }
           return {
             ...p,
             photoFileID: tempURLMap[coverPhoto] || coverPhoto,
-            waterCountdown: this.calcWaterCountdown(p),
-            companionDays
+            urgentCareTask: this.calcUrgentCareTask(p),
+            careBadges: this.calcCareBadges(p),
+            companionDays,
+            totalDays
           };
         });
 
@@ -203,16 +231,16 @@ Page({
         const speciesCount = speciesSet.size;
 
         const caredPlantIds = [...new Set(todayJournals.map(j => String(j.plantId)))];
-        const todoPlants = allPlants.filter(p => !caredPlantIds.includes(String(p._id)));
+        const todoPlants = allPlants.filter(p => !caredPlantIds.includes(String(p._id)) && !p.isDead);
 
         // 如果没有保留的状态，重置为默认值
         const shouldResetState = !this._preserveState;
         this.setData({
           allPlants,
-          speciesCount, // 设置科数统计
+          speciesCount,
           todoCount: todoPlants.length,
           todoPlants,
-          todoAvatars: todoPlants.slice(0, 3), // 只取前3个用于头像展示
+          todoAvatars: todoPlants.slice(0, 3),
           searchKey: shouldResetState ? '' : this.data.searchKey,
           page: shouldResetState ? 1 : this.data.page,
           isTodoFilter: shouldResetState ? false : this.data.isTodoFilter
@@ -221,7 +249,7 @@ Page({
         this.applyFilter(this.data.searchKey || (this.data.isTodoFilter ? 'TODO_CHECKIN' : ''));
       } catch (err) {
         wx.hideNavigationBarLoading();
-        console.error('【植光】获取植物列表失败', err);
+        console.error('【小植书】获取植物列表失败', err);
         wx.showToast({ title: '加载失败', icon: 'none' });
       } finally {
         this._fetching = false; // ✅ 释放请求锁
@@ -252,6 +280,8 @@ Page({
     }, 300);
   },
 
+  toggleShowDead() {},
+
   // 过滤 + 分页（支持联合查询，带缓存优化）
   applyFilter(searchKey) {
     // 性能优化：如果搜索关键词和数据都没变，使用缓存结果
@@ -260,22 +290,23 @@ Page({
       this.renderPage(this._cachedFilteredPlants);
       return;
     }
-    
-    // ✅ 修复：变量名改为复数形式，保持一致性
+
     let filteredPlants = [];
-    
+
     if (searchKey === 'TODO_CHECKIN') {
-      // 打卡模式：显示今日未照顾列表
       filteredPlants = this.data.todoPlants;
     } else {
-      // 普通搜索模式（支持 / 联合查询）
       const key = searchKey || '';
+      let source = this.data.allPlants || [];
+      // 活跃植物在前，结束陪伴植物排末尾
+      const alive = source.filter(p => !p.isDead);
+      const dead = source.filter(p => p.isDead);
+      source = [...alive, ...dead];
       if (!key) {
-        filteredPlants = this.data.allPlants || [];
+        filteredPlants = source;
       } else {
-        // 支持 / 分隔符联合查询，例如：多肉/客厅
         const parts = key.split('/').map(s => s.trim().toLowerCase()).filter(Boolean);
-        filteredPlants = (this.data.allPlants || []).filter(item => {
+        filteredPlants = source.filter(item => {
           return parts.every(part => {
             const name = (item.nickname || '').toLowerCase();
             const species = (item.species || '').toLowerCase();
@@ -285,12 +316,22 @@ Page({
         });
       }
     }
-    
-    // 缓存过滤结果
+
     this._lastSearchKey = searchKey;
     this._cachedFilteredPlants = filteredPlants;
     this._lastAllPlantsCount = (this.data.allPlants || []).length;
-    
+
+    // 排序
+    if (this.data.sortBy === 'adoptDateAsc' || this.data.sortBy === 'adoptDateDesc') {
+      const asc = this.data.sortBy === 'adoptDateAsc';
+      filteredPlants = [...filteredPlants].sort((a, b) => {
+        if (a.isDead !== b.isDead) return a.isDead ? 1 : -1;
+        const ta = a.adoptDate ? new Date(a.adoptDate).getTime() : Infinity;
+        const tb = b.adoptDate ? new Date(b.adoptDate).getTime() : Infinity;
+        return asc ? ta - tb : tb - ta;
+      });
+    }
+
     this.renderPage(filteredPlants);
   },
 
@@ -355,7 +396,7 @@ Page({
    */
   onShareAppMessage() {
     return {
-      title: '植光 ZhiGuang - 记录每一寸破土而出的生命',
+      title: '小植书 - 记录每一寸破土而出的生命',
       path: '/pages/index/index'
     };
   },
@@ -365,7 +406,7 @@ Page({
    */
   onShareTimeline() {
     return {
-      title: '植光 ZhiGuang - 记录每一寸破土而出的生命',
+      title: '小植书 - 记录每一寸破土而出的生命',
       path: '/pages/index/index'
     };
   },
@@ -398,6 +439,48 @@ Page({
   goToAddPlant() {
     this._needRefresh = true; // 返回时强制刷新
     wx.navigateTo({ url: '/pages/add-plant/add-plant' });
+  },
+
+  toggleSort() {
+    this.setData({ showSortPanel: !this.data.showSortPanel });
+  },
+
+  selectSort(e) {
+    const sortBy = e.currentTarget.dataset.sort;
+    this._cachedFilteredPlants = null;
+    this.setData({ sortBy, showSortPanel: false });
+    this.applyFilter(this.data.searchKey || (this.data.isTodoFilter ? 'TODO_CHECKIN' : ''));
+  },
+
+  closeSortPanel() {
+    this.setData({ showSortPanel: false });
+  },
+
+  stopPropagation() {},
+
+  onCardTouchStart(e) {
+    this._touchStartX = e.touches[0].clientX;
+    this._touchStartY = e.touches[0].clientY;
+    this._touchStartId = e.currentTarget.dataset.id;
+    this._touchMoved = false;
+  },
+
+  onCardTouchEnd(e) {
+    const dx = Math.abs(e.changedTouches[0].clientX - this._touchStartX);
+    const dy = Math.abs(e.changedTouches[0].clientY - this._touchStartY);
+    if (dx > 10 || dy > 10) return;
+    const plantId = this._touchStartId;
+    if (!plantId) return;
+    if (this._clicking) return;
+    this._clicking = true;
+    // 触发缩放反馈
+    this.setData({ tapActiveId: plantId });
+    setTimeout(() => {
+      this.setData({ tapActiveId: '' });
+      this._clicking = false;
+      this._preserveState = true;
+      wx.navigateTo({ url: `/pages/plant-detail/plant-detail?id=${plantId}` });
+    }, 150);
   },
 
   goToDetail(e) {

@@ -2,6 +2,7 @@ const { getPlantPhotos } = require('../../utils/imageHelper.js');
 const { checkRequestAllowed, logRequest } = require('../../utils/antiRefresh.js');
 const { invalidateCache, getTempFileURLs } = require('../../utils/imageCache.js');
 const { getPlantPhotosWithCache, getCoverPhotoWithCache } = require('../../utils/imageHelper.js');
+const { parseCareTasksCompat, calcTaskCountdown } = require('../../utils/careHelper.js');
 
 Page({
   data: {
@@ -16,10 +17,12 @@ Page({
     loading: true,
     likeCount: 0,
     hasLiked: false,
-    plantPhotos: [], // 植物图片数组
-    currentPhotoIndex: 0, // 当前轮播图索引
-    swiperHeight: 1000, // 动态轮播高度,默认1000rpx
-    imageHeights: {} // 存储每张图片计算后的高度
+    plantPhotos: [],
+    currentPhotoIndex: 0,
+    swiperHeight: 1000,
+    imageHeights: {},
+    careTasksDisplay: [],
+    isDead: false
   },
 
   onLoad(options) {
@@ -104,7 +107,9 @@ Page({
         loading: false,
         likeCount,
         hasLiked,
-        plantPhotos: photos // ✅ 拿到缓存 URL 存入 data
+        plantPhotos: photos,
+        careTasksDisplay: this.buildCareTasksDisplay(plant),
+        isDead: plant.isDead || false
       });
       wx.setNavigationBarTitle({ title: plant.nickname + '的成长' });
       this._processJournals(journals || []);
@@ -131,7 +136,7 @@ Page({
       }
     }).catch(err => {
       this.setData({ loading: false });
-      console.error('【植光】加载失败:', err);
+      console.error('【小植书】加载失败:', err);
       wx.showToast({ title: '加载失败，请返回重试', icon: 'none' });
     });
   },
@@ -181,7 +186,7 @@ Page({
           }
         });
       } catch (err) {
-        console.error('【植光】日记图批量获取 tempURL 失败', err);
+        console.error('【小植书】日记图批量获取 tempURL 失败', err);
         // 降级处理：获取失败则回退使用原始 fileID
         this._fallbackRawPhotos(formattedList);
       }
@@ -202,6 +207,34 @@ Page({
     });
   },
 
+
+  buildCareTasksDisplay(plant) {
+    if (plant.carePlanEnabled === false) return [];
+    const tasks = parseCareTasksCompat(plant);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const colorMap = {
+      water:     { iconColor: '#3B82F6', iconBg: '#EFF6FF' },
+      fertilize: { iconColor: '#F59E0B', iconBg: '#FFF7ED' },
+      repot:     { iconColor: '#22C55E', iconBg: '#F0FDF4' },
+      prune:     { iconColor: '#10B981', iconBg: '#F0FDF4' },
+      pesticide: { iconColor: '#EF4444', iconBg: '#FEF2F2' },
+    };
+
+    return tasks.filter(t => t.enabled).map(t => {
+      const countdown = calcTaskCountdown(t);
+      const nextDate = new Date(today.getTime() + countdown * 24 * 60 * 60 * 1000);
+      const m = nextDate.getMonth() + 1;
+      const d = nextDate.getDate();
+      let nextDateStr = '';
+      if (countdown > 0) nextDateStr = `${m}月${d}日`;
+      else if (countdown === 0) nextDateStr = '今天';
+      else nextDateStr = `已逾期${Math.abs(countdown)}天`;
+      const color = colorMap[t.taskId] || { iconColor: '#22C55E', iconBg: '#F0FDF4' };
+      return { name: t.name, icon: t.icon, interval: t.interval, countdown, isOverdue: countdown < 0, nextDateStr, iconColor: color.iconColor, iconBg: color.iconBg };
+    });
+  },
 
   // 亲密度计算
   calcIntimacy(journals) {
@@ -411,6 +444,10 @@ Page({
 
   openJournalPage() {
     if (!this.data.plantInfo) return;
+    if (this.data.isDead) {
+      wx.showToast({ title: '该植物已结束陪伴，记录已锁定', icon: 'none' });
+      return;
+    }
     wx.navigateTo({
       url: `/pages/add-journal/add-journal?id=${this.data.plantId}&name=${this.data.plantInfo.nickname}`
     });
@@ -505,6 +542,63 @@ Page({
     });
   },
 
+  confirmMarkDead() {
+    wx.showModal({
+      title: '结束陪伴',
+      content: '每一段陪伴都值得被记住。结束陪伴后，植物和所有日记将完整保留，随时可以回来看看。',
+      confirmText: '好好告别',
+      cancelText: '再陪一会',
+      confirmColor: '#92400E',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '操作中...' });
+        try {
+          const result = await wx.cloud.callFunction({
+            name: 'markPlantDead',
+            data: { plantId: this.data.plantId }
+          });
+          wx.hideLoading();
+          if (!result.result.success) throw new Error(result.result.message);
+          const app = getApp();
+          app.globalData.needRefreshIndex = true;
+          this.setData({ isDead: true, 'plantInfo.deadDate': result.result.deadDate });
+          wx.showToast({ title: '已结束陪伴', icon: 'success' });
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: err.message || '操作失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
+  confirmRevive() {
+    wx.showModal({
+      title: '恢复陪伴',
+      content: '确定要重新开始陪伴这株植物吗？',
+      confirmText: '继续陪伴',
+      confirmColor: '#16A34A',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '操作中...' });
+        try {
+          const result = await wx.cloud.callFunction({
+            name: 'revivePlant',
+            data: { plantId: this.data.plantId }
+          });
+          wx.hideLoading();
+          if (!result.result.success) throw new Error(result.result.message);
+          const app = getApp();
+          app.globalData.needRefreshIndex = true;
+          this.setData({ isDead: false });
+          wx.showToast({ title: '已恢复陪伴', icon: 'success' });
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: err.message || '操作失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
   confirmDelete() {
     wx.showModal({
       title: '确认删除',
@@ -548,7 +642,7 @@ Page({
   // 点击"分享植物卡片"按钮时触发（open-type="share" 会自动调用此方法）
   onShareAppMessage() {
     const { plantInfo, intimacy } = this.data;
-    if (!plantInfo) return { title: '植光 - 植物养护记录' };
+    if (!plantInfo) return { title: '小植书 - 植物养护记录' };
     
     // 分享成功后显示提示
     setTimeout(() => {
@@ -572,7 +666,7 @@ Page({
 
   onShareTimeline() {
     const { plantInfo, intimacy } = this.data;
-    if (!plantInfo) return { title: '植光 - 植物养护记录' };
+    if (!plantInfo) return { title: '小植书 - 植物养护记录' };
     
     // 分享到朋友圈后提示
     setTimeout(() => {
@@ -628,7 +722,7 @@ Page({
       const { success, hasLiked: newHasLiked, likeCount: newLikeCount, error } = res.result;
       
       if (!success) {
-        console.error('【植光】点赞失败:', error);
+        console.error('【小植书】点赞失败:', error);
         wx.showToast({ title: '操作失败，请重试', icon: 'none' });
         return;
       }
@@ -646,7 +740,7 @@ Page({
       });
     }).catch(err => {
       wx.hideLoading();
-      console.error('【植光】点赞失败:', err);
+      console.error('【小植书】点赞失败:', err);
       wx.showToast({ title: '操作失败，请重试', icon: 'none' });
     });
   },

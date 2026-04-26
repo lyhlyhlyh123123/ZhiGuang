@@ -2,6 +2,7 @@
 const { uploadImages, getPlantPhotos } = require('../../utils/imageHelper.js');
 const { smartCompress } = require('../../utils/imageCompressor.js');
 const { invalidateCache } = require('../../utils/imageCache.js');
+const { parseCareTasksCompat, getDefaultPresets } = require('../../utils/careHelper.js');
 
 Page({
   data: {
@@ -12,13 +13,15 @@ Page({
     source: '',
     remark: '',
     adoptDate: '',
-    waterInterval: 7,
-    imageList: [], // 混合数组：云端图片和本地新增图片
-    originalPhotoList: [], // 原始的云端图片数组
+    isDead: false,
+    imageList: [],
+    originalPhotoList: [],
     maxImageCount: 9,
-    selectedIndex: -1, // 选中的图片索引（用于交换）
-    speciesCategories: [], // 品种类目
-    locationCategories: [], // 位置类目
+    selectedIndex: -1,
+    speciesCategories: [],
+    locationCategories: [],
+    carePlanEnabled: true,
+    careTasks: [],
   },
 
   onLoad(options) {
@@ -56,9 +59,14 @@ Page({
 
       const data = result.result.data;
 
-      // 获取图片列表（兼容新旧数据）
       const photos = getPlantPhotos(data);
       const imageList = photos.map(url => ({ url, isCloud: true }));
+      const careTasks = parseCareTasksCompat(data);
+      // Merge: ensure all current DEFAULT_PRESETS exist, preserving saved settings
+      const merged = getDefaultPresets().map(preset => {
+        const existing = careTasks.find(t => t.taskId === preset.taskId);
+        return existing || { ...preset, lastDate: null };
+      });
 
       this.setData({
         nickname: data.nickname,
@@ -67,15 +75,18 @@ Page({
         source: data.source || '',
         remark: data.remark || '',
         adoptDate: data.adoptDate,
-        waterInterval: data.waterInterval || 7,
+        carePlanEnabled: data.carePlanEnabled !== false,
+        careTasks: merged,
+        isDead: data.isDead || false,
         imageList: imageList,
         originalPhotoList: photos
       });
+      this._originalDeadDate = data.deadDate || null;
 
       wx.hideLoading();
     } catch (err) {
       wx.hideLoading();
-      console.error('【植光】加载植物资料失败:', err);
+      console.error('【小植书】加载植物资料失败:', err);
       wx.showToast({ title: '加载失败，请返回重试', icon: 'none' });
     }
   },
@@ -214,18 +225,44 @@ Page({
     this.setData({ remark: e.detail.value });
   },
 
-  // ✨ 新增：步进器：减少天数
-  minusInterval() {
-    if (this.data.waterInterval > 1) {
-      this.setData({ waterInterval: this.data.waterInterval - 1 });
-    }
+  toggleCarePlan() {
+    this.setData({ carePlanEnabled: !this.data.carePlanEnabled });
   },
 
-  // ✨ 新增：步进器：增加天数
-  addInterval() {
-    if (this.data.waterInterval < 30) {
-      this.setData({ waterInterval: this.data.waterInterval + 1 });
-    }
+  toggleTaskEnabled(e) {
+    const { index } = e.currentTarget.dataset;
+    const careTasks = [...this.data.careTasks];
+    careTasks[index] = { ...careTasks[index], enabled: !careTasks[index].enabled };
+    this.setData({ careTasks });
+  },
+
+  onTaskIntervalInput(e) {
+    const { index } = e.currentTarget.dataset;
+    const val = parseInt(e.detail.value, 10);
+    if (isNaN(val) || val < 1) return;
+    const careTasks = [...this.data.careTasks];
+    careTasks[index] = { ...careTasks[index], interval: Math.min(val, 365) };
+    this.setData({ careTasks });
+  },
+
+  onTaskNameInput(e) {
+    const { index } = e.currentTarget.dataset;
+    const careTasks = [...this.data.careTasks];
+    careTasks[index] = { ...careTasks[index], name: e.detail.value };
+    this.setData({ careTasks });
+  },
+
+  addCustomTask() {
+    const careTasks = [...this.data.careTasks];
+    careTasks.push({ taskId: 'custom_' + Date.now(), name: '', icon: 'icon-jilu', interval: 7, lastDate: null, enabled: true });
+    this.setData({ careTasks });
+  },
+
+  removeCustomTask(e) {
+    const { index } = e.currentTarget.dataset;
+    const careTasks = [...this.data.careTasks];
+    careTasks.splice(index, 1);
+    this.setData({ careTasks });
   },
 
   // 添加图片
@@ -242,7 +279,7 @@ Page({
         count: remaining,
         mediaType: ['image'],
         sourceType: ['album', 'camera'],
-        sizeType: ['original'], // ✅ 先选择原图，然后智能压缩
+        sizeType: ['compressed', 'original'],
       });
 
       // ✅ 显示压缩进度
@@ -274,7 +311,7 @@ Page({
       });
     } catch (err) {
       wx.hideLoading();
-      console.error('【植光】选择照片失败:', err);
+      console.error('【小植书】选择照片失败:', err);
     }
   },
 
@@ -328,7 +365,7 @@ Page({
     if (this._submitting) return;
     this._submitting = true;
 
-    const { nickname, species, location, source, remark, adoptDate, waterInterval, imageList, plantId, originalPhotoList } = this.data;
+    const { nickname, species, location, source, remark, adoptDate, carePlanEnabled, careTasks, imageList, plantId, originalPhotoList, isDead } = this.data;
 
     if (!nickname || !species || !location) {
       this._submitting = false;
@@ -342,15 +379,19 @@ Page({
       return;
     }
 
+    if (carePlanEnabled && !careTasks.some(t => t.enabled)) {
+      this._submitting = false;
+      wx.showToast({ title: '请至少启用一项养护任务，或关闭养护计划', icon: 'none', duration: 2500 });
+      return;
+    }
+
     wx.showLoading({ title: '更新中...' });
     let uploadedFileIDs = [];
 
     try {
       const localPhotos = imageList.filter(img => !img.isCloud).map(img => img.url);
 
-      // 新增本地图片先在前端上传，避免把手机本地路径传到云函数
       if (localPhotos.length > 0) {
-        // 图片已在选图时经过 smartCompress，此处直接上传不重复压缩
         const uploadResult = await uploadImages(localPhotos, 'plant-photos', false);
         uploadedFileIDs = uploadResult.success || [];
 
@@ -363,13 +404,14 @@ Page({
         }
       }
 
-      // 构建最终图片列表：云端旧图 + 新上传fileID（保持原顺序）
       let localIndex = 0;
       const completePhotoList = imageList
         .map(img => (img.isCloud ? img.url : (uploadedFileIDs[localIndex++] || '')))
         .filter(Boolean);
 
-      // 调用云函数更新植物
+      const waterTask = careTasks.find(t => t.taskId === 'water');
+      const waterInterval = waterTask ? waterTask.interval : 7;
+
       const updateResult = await wx.cloud.callFunction({
         name: 'updatePlant',
         data: {
@@ -381,6 +423,10 @@ Page({
           remark: remark || '',
           adoptDate,
           waterInterval,
+          carePlanEnabled,
+          careTasks,
+          isDead,
+          deadDate: isDead ? (this._originalDeadDate || new Date().toISOString().slice(0, 10)) : null,
           finalPhotoList: completePhotoList,
           originalPhotoList: originalPhotoList || []
         }
@@ -394,11 +440,10 @@ Page({
         throw new Error(updateResult.result.message);
       }
 
-      // ✅ 优化：保存成功后立即设置首页刷新标志
       const app = getApp();
       app.globalData.needRefreshIndex = true;
+      app.globalData.needRefreshBatch = true;
 
-      // 只失效被删除的图片缓存，保留未变动图片的缓存
       const deletedPhotos = (originalPhotoList || []).filter(
         id => !completePhotoList.includes(id) && id && id.startsWith('cloud://')
       );
@@ -410,10 +455,7 @@ Page({
       this._submitting = false;
       wx.showToast({ title: '修改成功！', icon: 'success', duration: 1000 });
 
-      // ✅ 优化：缩短延迟时间，提升响应速度
-      setTimeout(() => {
-        wx.navigateBack({ delta: 1 });
-      }, 1000);
+      setTimeout(() => { wx.navigateBack({ delta: 1 }); }, 1000);
 
     } catch (err) {
       if (uploadedFileIDs.length > 0) {
@@ -422,8 +464,12 @@ Page({
       this._submitting = false;
       wx.hideLoading();
       wx.showToast({ title: err.message || '更新失败', icon: 'none' });
-      console.error('【植光】更新失败:', err);
+      console.error('【小植书】更新失败:', err);
     }
+  },
+
+  toggleDead() {
+    this.setData({ isDead: !this.data.isDead });
   },
 
   goBack() {

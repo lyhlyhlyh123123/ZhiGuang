@@ -17,10 +17,11 @@ exports.main = async (event, context) => {
     remark = '',
     adoptDate,
     photoList = [],
-    waterInterval = 7
+    waterInterval = 7,
+    carePlanEnabled = true,
+    careTasks = []
   } = event
 
-  // 数据验证
   if (!nickname || !species || !location) {
     return { success: false, message: '请填写昵称、品种和位置' }
   }
@@ -29,19 +30,21 @@ exports.main = async (event, context) => {
     return { success: false, message: '请至少上传一张照片' }
   }
 
-  if (waterInterval < 1 || waterInterval > 30) {
-    return { success: false, message: '浇水间隔应在1-30天之间' }
+  // 验证 careTasks interval 范围
+  if (careTasks.some(t => t.interval < 1 || t.interval > 365)) {
+    return { success: false, message: '养护周期应在1-365天之间' }
   }
 
+  // 取水任务 interval 同步到旧字段，保证旧逻辑兼容
+  const waterTask = careTasks.find(t => t.taskId === 'water')
+  const finalWaterInterval = waterTask ? waterTask.interval : waterInterval
+
   const db = cloud.database()
-  const _ = db.command
 
   try {
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // 如果没有提供领养日期，使用今天
-    const finalAdoptDate = adoptDate || `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+    const cstDate = new Date(today.getTime() + 8 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const finalAdoptDate = adoptDate || cstDate
 
     const result = await db.collection('plants').add({
       data: {
@@ -52,9 +55,11 @@ exports.main = async (event, context) => {
         remark,
         adoptDate: finalAdoptDate,
         photoList,
-        photoFileID: photoList[0] || '', // 第一张作为封面
-        waterInterval,
+        photoFileID: photoList[0] || '',
+        waterInterval: finalWaterInterval,
         lastWaterDate: today,
+        carePlanEnabled,
+        careTasks,
         _openid: openid,
         createTime: db.serverDate(),
         updateTime: db.serverDate()

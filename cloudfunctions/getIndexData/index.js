@@ -35,8 +35,10 @@ exports.main = async (event, context) => {
   const _ = db.command
 
   try {
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
+    // 北京时间今天 00:00:00 对应的 UTC 时间（与 getCalendarDayJournals 保持一致）
+    const now = new Date()
+    const cst = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+    const todayStart = new Date(Date.UTC(cst.getUTCFullYear(), cst.getUTCMonth(), cst.getUTCDate()) - 8 * 60 * 60 * 1000)
 
     const plants = await fetchAll(() =>
       db.collection('plants')

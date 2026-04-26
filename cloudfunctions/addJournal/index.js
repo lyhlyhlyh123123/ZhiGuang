@@ -54,17 +54,35 @@ exports.main = async (event, context) => {
 
     const addRes = await db.collection('journals').add({ data: journalData })
 
-    const hasWater = selectedActions.some(a => a.label === '浇水')
+    // 更新植物养护任务的 lastDate
+    const CARE_TASK_VALUES = ['water', 'fertilize', 'repot', 'prune', 'pesticide', 'fungicide']
+    const actionValues = selectedActions
+      .map(a => a.value)
+      .filter(v => CARE_TASK_VALUES.includes(v))
+
+    const today = new Date()
+    // 获取北京时间日期字符串
+    const cstDate = new Date(today.getTime() + 8 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const hasWater = actionValues.includes('water')
+
+    const plantUpdate = { updateTime: db.serverDate() }
+
     if (hasWater) {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      await db.collection('plants').doc(plantId).update({
-        data: {
-          lastWaterDate: today,
-          updateTime: db.serverDate()
-        }
-      })
+      plantUpdate.lastWaterDate = today
     }
+
+    // 更新 careTasks 数组中对应任务的 lastDate
+    if (actionValues.length > 0 && plant.careTasks && plant.careTasks.length > 0) {
+      const updatedTasks = plant.careTasks.map(task => {
+        if (actionValues.includes(task.taskId)) {
+          return { ...task, lastDate: cstDate }
+        }
+        return task
+      })
+      plantUpdate.careTasks = updatedTasks
+    }
+
+    await db.collection('plants').doc(plantId).update({ data: plantUpdate })
 
     return { success: true, data: { journalId: addRes._id } }
   } catch (error) {

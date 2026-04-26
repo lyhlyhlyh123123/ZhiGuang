@@ -481,3 +481,69 @@ page {
   left: -9999px;
   opacity: 0;
 }
+
+/* 养护计划 */
+.bg-green { background-color: #F0FDF4; color: #16A34A; }
+.care-plan-header { border-bottom: 2rpx solid #F3F4F6; }
+
+.care-task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #F9FAFB;
+}
+
+.care-task-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-name {
+  font-size: 28rpx;
+  color: #374151;
+  font-weight: 500;
+}
+
+.task-name-input {
+  font-size: 28rpx;
+  color: #374151;
+  border-bottom: 1rpx solid #E5E7EB;
+  padding: 4rpx 8rpx;
+  flex: 1;
+  min-width: 120rpx;
+}
+
+.care-task-right {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+
+.step-val { font-size: 26rpx; font-weight: bold; min-width: 64rpx; text-align: center; }
+
+.task-icon {
+  font-size: 32rpx;
+  color: #6B7280;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.task-interval-input {
+  width: 80rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #374151;
+  border-bottom: 2rpx solid #E5E7EB;
+  padding: 4rpx 0;
+}
+
+.task-interval-unit {
+  font-size: 24rpx;
+  color: #9CA3AF;
+  margin-left: 6rpx;
+}

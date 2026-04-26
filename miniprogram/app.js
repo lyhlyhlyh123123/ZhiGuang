@@ -11,13 +11,14 @@ App({
       locationCategories: [], // 摆放位置类目
       // 页面刷新标志
       needRefreshIndex: false, // 首页是否需要刷新
+      needRefreshBatch: false, // 批量页是否需要刷新
     };
 
     // 加载类目数据
     this.loadCategories();
 
     if (!wx.cloud) {
-      console.error("【植光】请使用 2.2.3 或以上的基础库以使用云能力");
+      console.error("【小植书】请使用 2.2.3 或以上的基础库以使用云能力");
     } else {
       // 1. 初始化云环境 (这是前端所有云调用生效的前提)
       wx.cloud.init({
@@ -41,7 +42,7 @@ App({
       family: 'ZhiGuangIcon',
       source: 'url("https://at.alicdn.com/t/c/font_5145551_jxs5d9wb1xg.ttf?t=1774248023081")',
       fail: err => {
-        console.error('【植光】❌ 字体加载失败:', err);
+        console.error('【小植书】❌ 字体加载失败:', err);
       }
     });
   },
@@ -82,7 +83,7 @@ App({
         this.loginPromise = null;
         resolve(newOpenid);
       }).catch(err => {
-        console.error('【植光】❌ 云端鉴权失败', err);
+        console.error('【小植书】❌ 云端鉴权失败', err);
         this.loginPromise = null; // 失败也清除，允许重试
         reject(err);
       });
@@ -106,7 +107,7 @@ App({
    * 全局错误处理
    */
   onError: function(err) {
-    console.error('【植光】全局错误:', err);
+    console.error('【小植书】全局错误:', err);
     wx.showToast({ title: '出错了，请重试', icon: 'none' });
   },
 

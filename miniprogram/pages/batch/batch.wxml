@@ -40,44 +40,22 @@
   </scroll-view>
 
   <!-- 选择操作 -->
-  <view class="section-title" style="margin-top: 16rpx;">选择操作</view>
-  <swiper class="action-swiper" indicator-dots indicator-color="rgba(0,0,0,0.3)" indicator-active-color="#22C55E" circular autoplay="{{false}}">
-    <!-- 第1页：前4个操作 -->
-    <swiper-item>
-      <view class="action-grid">
-        <view
-          class="action-item {{item.selected ? 'active' : ''}}"
-          wx:for="{{actions}}" wx:for-index="idx" wx:key="value"
-          wx:if="{{idx < 4}}"
-          bindtap="toggleAction"
-          bindlongpress="longPressAction"
-          data-index="{{idx}}"
-        >
-          <text class="iconfont {{item.icon}} action-icon"></text>
-          <text class="action-label">{{item.label}}</text>
-          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
-        </view>
+  <view class="section-title" style="margin-top: 16rpx;">选择操作（滑动查看）</view>
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="action-scroll">
+    <view class="action-row">
+      <view
+        class="action-item {{item.selected ? 'active' : ''}}"
+        wx:for="{{actions}}" wx:for-index="idx" wx:key="value"
+        bindtap="toggleAction"
+        bindlongpress="longPressAction"
+        data-index="{{idx}}"
+      >
+        <text class="iconfont {{item.icon}} action-icon"></text>
+        <text class="action-label">{{item.label}}</text>
+        <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
       </view>
-    </swiper-item>
-    
-    <!-- 第2页：后4个操作 -->
-    <swiper-item>
-      <view class="action-grid">
-        <view
-          class="action-item {{item.selected ? 'active' : ''}}"
-          wx:for="{{actions}}" wx:for-index="idx" wx:key="value"
-          wx:if="{{idx >= 4}}"
-          bindtap="toggleAction"
-          bindlongpress="longPressAction"
-          data-index="{{idx}}"
-        >
-          <text class="iconfont {{item.icon}} action-icon"></text>
-          <text class="action-label">{{item.label}}</text>
-          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
-        </view>
-      </view>
-    </swiper-item>
-  </swiper>
+    </view>
+  </scroll-view>
 
   <!-- 备注 -->
   <view class="section-title" style="margin-top: 16rpx;">备注（可选）</view>

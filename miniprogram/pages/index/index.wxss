@@ -322,6 +322,7 @@ page {
 
 .list-header {
   margin-bottom: 28rpx;
+  position: relative;
 }
 
 .list-title-row {
@@ -351,6 +352,64 @@ page {
   font-weight: 700;
   padding: 6rpx 20rpx;
   border-radius: 20rpx;
+}
+
+.sort-btn {
+  margin-left: auto;
+  background: #F0FDF4;
+  border: 1rpx solid #BBF7D0;
+  border-radius: 20rpx;
+  padding: 6rpx 18rpx;
+}
+
+.sort-btn-text {
+  font-size: 22rpx;
+  color: #16A34A;
+  font-weight: 600;
+}
+
+.sort-panel {
+  position: absolute;
+  top: 60rpx;
+  right: 0;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+  width: 240rpx;
+  z-index: 100;
+}
+
+.sort-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 24rpx;
+  border-bottom: 1rpx solid #F3F4F6;
+}
+
+.sort-option:last-child {
+  border-bottom: none;
+}
+
+.sort-option-active {
+  background: #F0FDF4;
+}
+
+.sort-option-text {
+  font-size: 26rpx;
+  color: #1E3B28;
+}
+
+.sort-option-active .sort-option-text {
+  color: #16A34A;
+  font-weight: 600;
+}
+
+.sort-check {
+  font-size: 28rpx;
+  color: #16A34A;
+  font-weight: 700;
 }
 
 /* ===================== 空状态 ===================== */
@@ -397,7 +456,7 @@ page {
   border: 2rpx solid #F0FDF4;
 }
 
-.plant-card:active {
+.plant-card.card-tap-active {
   transform: scale(0.97);
 }
 
@@ -504,6 +563,7 @@ page {
 }
 
 .card-divider {
+  width: 100%;
   height: 1rpx;
   background: #F3F4F6;
   margin-bottom: 14rpx;
@@ -583,6 +643,53 @@ page {
   color: #F97316;
 }
 
+.care-badges-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.care-badges-row {
+  display: inline-flex;
+  gap: 12rpx;
+  padding: 0 4rpx;
+}
+
+.card-free-grow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.card-free-grow-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
+  background: #F0FDF4;
+  border: 1rpx solid #BBF7D0;
+  border-radius: 16rpx;
+  padding: 6rpx 14rpx;
+}
+
+.card-free-icon {
+  font-size: 20rpx;
+  color: #22C55E;
+}
+
+.card-free-text {
+  font-size: 20rpx;
+  color: #16a34a;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
+.card-dead-inner {
+  background: #F3F4F6;
+  border-color: #E5E7EB;
+}
+
+.card-dead-icon { color: #9CA3AF; }
+.card-dead-text { color: #9CA3AF; }
+
 /* ===================== 分页 ===================== */
 .pagination {
   display: flex;
@@ -602,7 +709,7 @@ page {
   font-weight: 600;
 }
 
-.page-btn[disabled] {
+.page-btn-disabled {
   color: #D1D5DB;
   border-color: #F3F4F6;
 }
@@ -649,3 +756,27 @@ page {
 .icon-add { color: #FFFFFF; }
 .icon-image { color: #FFFFFF; }
 .icon-arrow-left-bold { color: #22C55E; }
+/* 已结束植物 */
+.card-img.is-dead { filter: grayscale(100%) brightness(0.6); opacity: 0.9; }
+
+.dead-badge {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  background: rgba(107, 114, 128, 0.7);
+  border-radius: 12rpx;
+  padding: 6rpx 16rpx;
+}
+
+.dead-badge-text {
+  font-size: 22rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.show-dead-btn {
+  font-size: 22rpx;
+  color: #9CA3AF;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}

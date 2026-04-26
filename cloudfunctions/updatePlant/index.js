@@ -32,11 +32,14 @@ exports.main = async (event, context) => {
     remark = '',
     adoptDate,
     waterInterval,
-    finalPhotoList = [], // 最终图片列表（应全部为已上传后的fileID）
-    originalPhotoList = [] // 原始图片列表
+    carePlanEnabled = true,
+    careTasks = [],
+    isDead = false,
+    deadDate = null,
+    finalPhotoList = [],
+    originalPhotoList = []
   } = event
 
-  // 数据验证
   if (!plantId || !nickname || !species || !location) {
     return { success: false, message: '缺少必要参数' }
   }
@@ -45,9 +48,12 @@ exports.main = async (event, context) => {
     return { success: false, message: '请至少保留一张照片' }
   }
 
-  if (waterInterval < 1 || waterInterval > 30) {
-    return { success: false, message: '浇水间隔应在1-30天之间' }
+  if (careTasks.some(t => t.interval < 1 || t.interval > 365)) {
+    return { success: false, message: '养护周期应在1-365天之间' }
   }
+
+  const waterTask = careTasks.find(t => t.taskId === 'water')
+  const finalWaterInterval = waterTask ? waterTask.interval : (waterInterval || 7)
 
   const db = cloud.database()
 
@@ -74,7 +80,6 @@ exports.main = async (event, context) => {
 
     const completePhotoList = finalPhotoList.filter(Boolean)
 
-    // 3. 更新数据库
     await db.collection('plants').doc(plantId).update({
       data: {
         nickname,
@@ -83,9 +88,13 @@ exports.main = async (event, context) => {
         source,
         remark,
         adoptDate,
-        waterInterval,
+        waterInterval: finalWaterInterval,
+        carePlanEnabled,
+        careTasks,
+        isDead,
+        deadDate: isDead ? (deadDate || new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().split('T')[0]) : db.command.remove(),
         photoList: completePhotoList,
-        photoFileID: completePhotoList[0] || '', // 第一张作为封面
+        photoFileID: completePhotoList[0] || '',
         updateTime: db.serverDate()
       }
     })

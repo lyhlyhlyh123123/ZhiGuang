@@ -73,6 +73,24 @@
         <view class="list-title-dot"></view>
         <text class="list-title">我的绿植</text>
         <view class="plant-count-badge">拥有 {{allPlants.length || 0}} 株植物</view>
+        <view class="sort-btn" bindtap="toggleSort">
+          <text class="sort-btn-text">排序</text>
+        </view>
+      </view>
+      <!-- 排序面板 -->
+      <view class="sort-panel" wx:if="{{showSortPanel}}">
+        <view class="sort-option {{sortBy === 'createTime' ? 'sort-option-active' : ''}}" bindtap="selectSort" data-sort="createTime">
+          <text class="sort-option-text">默认排序</text>
+          <text class="sort-check" wx:if="{{sortBy === 'createTime'}}">✓</text>
+        </view>
+        <view class="sort-option {{sortBy === 'adoptDateAsc' ? 'sort-option-active' : ''}}" bindtap="selectSort" data-sort="adoptDateAsc">
+          <text class="sort-option-text">到家时间升序</text>
+          <text class="sort-check" wx:if="{{sortBy === 'adoptDateAsc'}}">✓</text>
+        </view>
+        <view class="sort-option {{sortBy === 'adoptDateDesc' ? 'sort-option-active' : ''}}" bindtap="selectSort" data-sort="adoptDateDesc">
+          <text class="sort-option-text">到家时间降序</text>
+          <text class="sort-check" wx:if="{{sortBy === 'adoptDateDesc'}}">✓</text>
+        </view>
       </view>
     </view>
 
@@ -92,12 +110,12 @@
 
     <!-- 植物卡片网格 -->
     <view class="plant-grid" wx:elif="{{plantList.length > 0}}">
-      <view class="plant-card" wx:for="{{plantList}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
+      <view class="plant-card {{item._id === tapActiveId ? 'card-tap-active' : ''}}" wx:for="{{plantList}}" wx:key="_id" bindtouchstart="onCardTouchStart" bindtouchend="onCardTouchEnd" data-id="{{item._id}}">
         <!-- 图片区 -->
         <view class="card-img-box">
-          <image class="card-img" src="{{item.photoFileID}}" mode="aspectFill" lazy-load binderror="onImageError" data-id="{{item._id}}"></image>
-          <!-- 陪伴天数 badge -->
-          <view class="companion-badge" wx:if="{{item.companionDays !== ''}}">
+          <image class="card-img {{item.isDead ? 'is-dead' : ''}}" src="{{item.photoFileID}}" mode="aspectFill" lazy-load binderror="onImageError" data-id="{{item._id}}"></image>
+          <!-- 陪伴天数 badge（仅活跃植物显示） -->
+          <view class="companion-badge" wx:if="{{item.companionDays !== '' && !item.isDead}}">
             <text class="companion-text">{{item.companionDays}}天</text>
           </view>
         </view>
@@ -115,14 +133,31 @@
             <text class="icon icon-yunshudidian card-loc-icon" style="color: #22C55E;"></text>
             <text class="card-loc-text">{{item.location}}</text>
           </view>
-          <view class="card-divider"></view>
-          <view class="card-footer">
-            <!-- 浇水倒计时 -->
-            <view class="water-badge {{item.waterCountdown <= 0 ? 'water-badge-urgent' : ''}}">
-              <text class="icon icon-water water-badge-icon"></text>
-              <text class="water-badge-text" wx:if="{{item.waterCountdown > 0}}">{{item.waterCountdown}}天后</text>
-              <text class="water-badge-text" wx:elif="{{item.waterCountdown === 0}}">今天浇</text>
-              <text class="water-badge-text" wx:else>逾期{{-item.waterCountdown}}天</text>
+          <block wx:if="{{item.careBadges && item.careBadges.length > 0 && !item.isDead}}">
+            <view class="card-divider"></view>
+            <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="care-badges-scroll" catchtap="stopPropagation">
+              <view class="care-badges-row">
+                <view wx:for="{{item.careBadges}}" wx:key="name" wx:for-item="badge" class="water-badge {{badge.isOverdue ? 'water-badge-urgent' : ''}}">
+                  <text class="iconfont {{badge.icon}} water-badge-icon"></text>
+                  <text class="water-badge-text" wx:if="{{badge.countdown > 0}}">{{badge.name}}·{{badge.countdown}}天后</text>
+                  <text class="water-badge-text" wx:elif="{{badge.countdown === 0}}">{{badge.name}}·今天</text>
+                  <text class="water-badge-text" wx:else>{{badge.name}}·逾期{{-badge.countdown}}天</text>
+                </view>
+              </view>
+            </scroll-view>
+          </block>
+          <view wx:elif="{{item.isDead}}" class="card-free-grow">
+            <view class="card-divider"></view>
+            <view class="card-free-grow-inner card-dead-inner">
+              <text class="iconfont icon-siwangbinzang card-free-icon card-dead-icon"></text>
+              <text class="card-free-text card-dead-text">共陪伴{{item.totalDays !== '' ? item.totalDays : '?'}}天</text>
+            </view>
+          </view>
+          <view wx:else class="card-free-grow">
+            <view class="card-divider"></view>
+            <view class="card-free-grow-inner">
+              <text class="iconfont icon-shengchangxinxi card-free-icon"></text>
+              <text class="card-free-text">自由生长中</text>
             </view>
           </view>
         </view>
@@ -131,9 +166,9 @@
 
     <!-- 分页 -->
     <view class="pagination" wx:if="{{!noResults && filteredPlants.length > pageSize}}">
-      <button class="page-btn" bindtap="onPrevPage" disabled="{{page <= 1}}">上一页</button>
+      <button class="page-btn {{page <= 1 ? 'page-btn-disabled' : ''}}" bindtap="onPrevPage" disabled="{{page <= 1}}">上一页</button>
       <text class="page-info">{{page}} / {{totalPages}}</text>
-      <button class="page-btn" bindtap="onNextPage" disabled="{{page >= totalPages}}">下一页</button>
+      <button class="page-btn {{page >= totalPages ? 'page-btn-disabled' : ''}}" bindtap="onNextPage" disabled="{{page >= totalPages}}">下一页</button>
     </view>
   </view>
 

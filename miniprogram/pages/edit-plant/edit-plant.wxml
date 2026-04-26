@@ -102,28 +102,52 @@
       </view>
     </view>
 
-    <view class="section-title mt-8">养护设定</view>
+    <view class="section-title mt-8">养护计划</view>
     <view class="settings-card">
-      
-      <view class="setting-item no-border">
+
+      <view class="setting-item care-plan-header">
         <view class="setting-info">
-          <view class="setting-icon-wrap bg-blue">
-            <text class="icon icon-water" style="font-size: 40rpx; color: #3B82F6;"></text>
+          <view class="setting-icon-wrap bg-green">
+            <text class="icon icon-penzai" style="font-size: 40rpx; color: #16A34A;"></text>
           </view>
           <view class="setting-text">
-            <text class="setting-name">浇水周期</text>
-            <text class="setting-desc">每隔 {{waterInterval}} 天浇一次水</text>
+            <text class="setting-name">启用养护计划</text>
+            <text class="setting-desc">提醒浇水、施肥等任务</text>
           </view>
         </view>
-        <view class="stepper">
-          <view class="step-btn" bindtap="minusInterval">-</view>
-          <text class="step-val">{{waterInterval}}</text>
-          <view class="step-btn text-green" bindtap="addInterval">
-            <text class="icon icon-plus" style="font-size: 24rpx;"></text>
-          </view>
-        </view>
+        <switch checked="{{carePlanEnabled}}" bindchange="toggleCarePlan" color="#16A34A" />
       </view>
-      
+
+      <block wx:if="{{carePlanEnabled}}">
+        <view class="care-task-item" wx:for="{{careTasks}}" wx:key="taskId" data-index="{{index}}">
+          <view class="care-task-left">
+            <switch checked="{{item.enabled}}" bindchange="toggleTaskEnabled" data-index="{{index}}" color="#16A34A" style="transform:scale(0.8);margin-right:4rpx;" />
+            <text class="iconfont {{item.icon}} task-icon"></text>
+            <text class="task-name">{{item.name}}</text>
+          </view>
+          <view class="care-task-right">
+            <input class="task-interval-input" type="number" value="{{item.interval}}" bindinput="onTaskIntervalInput" data-index="{{index}}" />
+            <text class="task-interval-unit">天</text>
+          </view>
+        </view>
+      </block>
+
+    </view>
+
+    <view class="section-title mt-8">陪伴状态</view>
+    <view class="settings-card">
+      <view class="setting-item no-border">
+        <view class="setting-info">
+          <view class="setting-icon-wrap {{isDead ? 'bg-dead' : 'bg-green'}}">
+            <text class="iconfont {{isDead ? 'icon-siwangbinzang' : 'icon-penzai'}}" style="font-size: 40rpx; color: {{isDead ? '#9CA3AF' : '#16A34A'}};"></text>
+          </view>
+          <view class="setting-text">
+            <text class="setting-name">{{isDead ? '已结束陪伴' : '陪伴中'}}</text>
+            <text class="setting-desc">{{isDead ? '点击切换为开始陪伴' : '若植物死亡，点击切换为结束陪伴'}}</text>
+          </view>
+        </view>
+        <switch checked="{{!isDead}}" bindchange="toggleDead" color="#16A34A" />
+      </view>
     </view>
 
   </scroll-view>

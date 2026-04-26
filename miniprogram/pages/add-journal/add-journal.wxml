@@ -16,51 +16,25 @@
     </view>
 
     <view class="section-title">做了哪些事？(可多选)</view>
-  <swiper class="action-swiper" indicator-dots indicator-color="rgba(0,0,0,0.3)" indicator-active-color="#22C55E" circular autoplay="{{false}}">
-    <!-- 第1页：前4个操作 -->
-    <swiper-item>
-      <view class="action-grid">
-        <view
-          class="action-item {{item.selected ? 'active' : ''}}"
-          wx:for="{{actions}}" wx:for-index="idx"
-          wx:key="value"
-          wx:if="{{idx < 4}}"
-          bindtap="toggleAction"
-          bindlongpress="longPressAction"
-          data-index="{{idx}}"
-        >
-          <text class="action-icon icon {{item.icon}}"></text>
-          <text class="action-label">{{item.label}}</text>
-          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
-          <view class="check-badge" wx:if="{{item.selected}}">
-            <text class="icon icon-plus" style="font-size: 16rpx; color: #fff;"></text>
-          </view>
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="action-scroll">
+    <view class="action-row">
+      <view
+        class="action-item {{item.selected ? 'active' : ''}}"
+        wx:for="{{actions}}" wx:for-index="idx"
+        wx:key="value"
+        bindtap="toggleAction"
+        bindlongpress="longPressAction"
+        data-index="{{idx}}"
+      >
+        <text class="action-icon icon {{item.icon}}"></text>
+        <text class="action-label">{{item.label}}</text>
+        <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
+        <view class="check-badge" wx:if="{{item.selected}}">
+          <text class="icon icon-plus" style="font-size: 16rpx; color: #fff;"></text>
         </view>
       </view>
-    </swiper-item>
-    
-    <!-- 第2页：后4个操作 -->
-    <swiper-item>
-      <view class="action-grid">
-        <view
-          class="action-item {{item.selected ? 'active' : ''}}"
-          wx:for="{{actions}}" wx:for-index="idx"
-          wx:key="value"
-          wx:if="{{idx >= 4}}"
-          bindtap="toggleAction"
-          bindlongpress="longPressAction"
-          data-index="{{idx}}"
-        >
-          <text class="action-icon icon {{item.icon}}"></text>
-          <text class="action-label">{{item.label}}</text>
-          <text wx:if="{{item.isCustom}}" class="custom-hint">长按编辑</text>
-          <view class="check-badge" wx:if="{{item.selected}}">
-            <text class="icon icon-plus" style="font-size: 16rpx; color: #fff;"></text>
-          </view>
-        </view>
-      </view>
-    </swiper-item>
-  </swiper>
+    </view>
+  </scroll-view>
 
   <view class="section-title">上传瞬间 (最多 9 张)</view>
   <view class="image-list">

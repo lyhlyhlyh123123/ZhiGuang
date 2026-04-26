@@ -13,7 +13,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '植光 ZhiGuang - 记录每一寸破土而出的生命',
+      title: '小植书 - 记录每一寸破土而出的生命',
       path: '/pages/index/index'
     };
   },

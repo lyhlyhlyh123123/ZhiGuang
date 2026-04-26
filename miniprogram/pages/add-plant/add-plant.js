@@ -1,29 +1,31 @@
 // pages/add-plant/add-plant.js
 const { uploadImages } = require('../../utils/imageHelper.js');
 const { smartCompress } = require('../../utils/imageCompressor.js');
+const { getDefaultPresets } = require('../../utils/careHelper.js');
 
 Page({
   data: {
     nickname: '',
     species: '',
     location: '',
-    source: '', // 来源（选填）
-    remark: '', // 备注（选填）
+    source: '',
+    remark: '',
     adoptDate: '',
-    tempImagePaths: [], // 改为数组，支持多图
-    waterInterval: 7,
-    maxImageCount: 9, // 最多9张图片
-    selectedIndex: -1, // 选中的图片索引（用于交换）
-    speciesCategories: [], // 品种类目
-    locationCategories: [], // 位置类目
+    tempImagePaths: [],
+    maxImageCount: 9,
+    selectedIndex: -1,
+    speciesCategories: [],
+    locationCategories: [],
+    carePlanEnabled: false,
+    careTasks: [],
   },
 
   onLoad() {
-    // 加载类目数据
     const app = getApp();
     this.setData({
       speciesCategories: app.globalData.speciesCategories || [],
-      locationCategories: app.globalData.locationCategories || []
+      locationCategories: app.globalData.locationCategories || [],
+      careTasks: getDefaultPresets()
     });
   },
 
@@ -171,7 +173,7 @@ Page({
         count: remaining,
         mediaType: ['image'],
         sourceType: ['album', 'camera'],
-        sizeType: ['original'], // ✅ 先选择原图，然后智能压缩
+        sizeType: ['compressed', 'original'],
       });
 
       // ✅ 显示压缩进度
@@ -198,7 +200,7 @@ Page({
       });
     } catch (err) {
       wx.hideLoading();
-      console.error('【植光】选择照片失败:', err);
+      console.error('【小植书】选择照片失败:', err);
     }
   },
 
@@ -257,9 +259,8 @@ Page({
     if (this._submitting) return;
     this._submitting = true;
 
-    const { nickname, species, location, source, remark, adoptDate, tempImagePaths, waterInterval } = this.data;
+    const { nickname, species, location, source, remark, adoptDate, tempImagePaths, carePlanEnabled, careTasks } = this.data;
 
-    // 验证必填字段
     if (!nickname || !species || !location) {
       this._submitting = false;
       wx.showToast({ title: '请填写昵称、品种和位置', icon: 'none' });
@@ -272,20 +273,20 @@ Page({
       return;
     }
 
+    if (carePlanEnabled && !careTasks.some(t => t.enabled)) {
+      this._submitting = false;
+      wx.showToast({ title: '请至少启用一项养护任务，或关闭养护计划', icon: 'none', duration: 2500 });
+      return;
+    }
+
     wx.showLoading({ title: '上传中...' });
 
     try {
-      // 图片已在选图时经过 smartCompress，此处直接上传不重复压缩
       const uploadResult = await uploadImages(tempImagePaths, 'plant-photos', false);
       const photoList = uploadResult.success;
 
-      // ✅ 修复：如果有图片上传失败，提示用户
       if (uploadResult.failed > 0) {
-        wx.showToast({
-          title: `${uploadResult.failed}张图片上传失败`,
-          icon: 'none',
-          duration: 2000
-        });
+        wx.showToast({ title: `${uploadResult.failed}张图片上传失败`, icon: 'none', duration: 2000 });
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
@@ -293,7 +294,9 @@ Page({
       today.setHours(0, 0, 0, 0);
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-      // 调用云函数添加植物
+      const waterTask = careTasks.find(t => t.taskId === 'water');
+      const waterInterval = waterTask ? waterTask.interval : 7;
+
       const addResult = await wx.cloud.callFunction({
         name: 'addPlant',
         data: {
@@ -304,7 +307,9 @@ Page({
           remark: remark || '',
           adoptDate: adoptDate || todayStr,
           photoList,
-          waterInterval
+          waterInterval,
+          carePlanEnabled,
+          careTasks
         }
       });
 
@@ -312,24 +317,19 @@ Page({
         throw new Error(addResult.result.message);
       }
 
-      // ✅ 优化：保存成功后立即设置首页刷新标志
       const app = getApp();
       app.globalData.needRefreshIndex = true;
 
       wx.hideLoading();
       this._submitting = false;
       wx.showToast({ title: '添加成功！', icon: 'success', duration: 1000 });
-      
-      // ✅ 优化：缩短延迟时间，提升响应速度
-      setTimeout(() => {
-        wx.navigateBack({ delta: 1 });
-      }, 1000);
+      setTimeout(() => { wx.navigateBack({ delta: 1 }); }, 1000);
 
     } catch (err) {
       this._submitting = false;
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'error' });
-      console.error('【植光】保存失败:', err);
+      console.error('【小植书】保存失败:', err);
     }
   },
 
@@ -337,19 +337,47 @@ Page({
     wx.navigateBack({ delta: 1 });
   },
 
-  minusInterval() {
-    if (this.data.waterInterval > 1) {
-      this.setData({ waterInterval: this.data.waterInterval - 1 });
-    }
+  toggleCarePlan() {
+    this.setData({ carePlanEnabled: !this.data.carePlanEnabled });
   },
 
-  addInterval() {
-    if (this.data.waterInterval < 30) {
-      this.setData({ waterInterval: this.data.waterInterval + 1 });
-    }
+  toggleTaskEnabled(e) {
+    const { index } = e.currentTarget.dataset;
+    const careTasks = [...this.data.careTasks];
+    careTasks[index] = { ...careTasks[index], enabled: !careTasks[index].enabled };
+    this.setData({ careTasks });
   },
 
-  // ✅ 修复：添加页面卸载时清理
+  onTaskIntervalInput(e) {
+    const { index } = e.currentTarget.dataset;
+    const val = parseInt(e.detail.value, 10);
+    if (isNaN(val) || val < 1) return;
+    const careTasks = [...this.data.careTasks];
+    careTasks[index] = { ...careTasks[index], interval: Math.min(val, 365) };
+    this.setData({ careTasks });
+  },
+
+  onTaskNameInput(e) {
+    const { index } = e.currentTarget.dataset;
+    const careTasks = [...this.data.careTasks];
+    careTasks[index] = { ...careTasks[index], name: e.detail.value };
+    this.setData({ careTasks });
+  },
+
+  addCustomTask() {
+    const careTasks = [...this.data.careTasks];
+    const taskId = 'custom_' + Date.now();
+    careTasks.push({ taskId, name: '', icon: 'icon-jilu', interval: 7, lastDate: null, enabled: true });
+    this.setData({ careTasks });
+  },
+
+  removeCustomTask(e) {
+    const { index } = e.currentTarget.dataset;
+    const careTasks = [...this.data.careTasks];
+    careTasks.splice(index, 1);
+    this.setData({ careTasks });
+  },
+
   onUnload() {
     this._submitting = false;
   }

@@ -39,8 +39,9 @@ exports.main = async (event, context) => {
   const db = cloud.database()
   const _ = db.command
 
-  const start = new Date(year, month - 1, 1)
-  const end = new Date(year, month, 1)
+  // 北京时间 UTC+8：查询范围要减去8小时偏移
+  const start = new Date(Date.UTC(year, month - 1, 1) - 8 * 60 * 60 * 1000)
+  const end = new Date(Date.UTC(year, month, 1) - 8 * 60 * 60 * 1000)
 
   try {
     const plantList = await fetchAll(() =>
@@ -54,8 +55,9 @@ exports.main = async (event, context) => {
 
     const addDayKeys = (records = []) => {
       records.forEach(record => {
-        const d = new Date(record.createTime)
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        // 转换为北京时间 UTC+8
+        const d = new Date(new Date(record.createTime).getTime() + 8 * 60 * 60 * 1000)
+        const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
         daySet.add(key)
       })
     }

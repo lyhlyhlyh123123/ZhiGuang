@@ -38,7 +38,7 @@ async function getPlantPhotosWithCache(plant) {
       }, {});
       return rawPhotos.map(id => urlMap[id] || id);
     } catch (err) {
-      console.warn('【植光】轮播图缓存转换失败，降级原图', err);
+      console.warn('【小植书】轮播图缓存转换失败，降级原图', err);
       return rawPhotos;
     }
   }
@@ -58,7 +58,7 @@ function compressImage(filePath, quality = 80) {
       quality,
       success: res => resolve(res.tempFilePath),
       fail: () => {
-        console.warn('【植光】图片压缩失败，使用原图:', filePath);
+        console.warn('【小植书】图片压缩失败，使用原图:', filePath);
         resolve(filePath);
       }
     });
@@ -93,7 +93,7 @@ async function uploadImages(imagePaths, folder = 'plant-photos', compress = true
 
       return res.fileID;
     } catch (err) {
-      console.error('【植光】上传图片失败:', path, err);
+      console.error('【小植书】上传图片失败:', path, err);
       throw err;
     }
   });
@@ -106,7 +106,7 @@ async function uploadImages(imagePaths, folder = 'plant-photos', compress = true
   const failedCount = results.filter(r => r.status === 'rejected').length;
 
   if (failedCount > 0) {
-    console.warn(`【植光】${failedCount}/${imagePaths.length} 张图片上传失败`);
+    console.warn(`【小植书】${failedCount}/${imagePaths.length} 张图片上传失败`);
   }
 
   if (successFiles.length === 0 && imagePaths.length > 0) {
@@ -157,7 +157,7 @@ async function getCoverPhotoWithCache(plant) {
     }, {});
     return urlMap[rawCover] || rawCover;
   } catch (err) {
-    console.warn('【植光】封面图缓存转换失败，降级原图', err);
+    console.warn('【小植书】封面图缓存转换失败，降级原图', err);
     return rawCover;
   }
 }

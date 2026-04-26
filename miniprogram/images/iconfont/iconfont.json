@@ -6,6 +6,27 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "5387667",
+      "name": "日期",
+      "font_class": "riqi1",
+      "unicode": "eb2a",
+      "unicode_decimal": 60202
+    },
+    {
+      "icon_id": "27988649",
+      "name": "生长信息",
+      "font_class": "shengchangxinxi",
+      "unicode": "e625",
+      "unicode_decimal": 58917
+    },
+    {
+      "icon_id": "8027259",
+      "name": "死亡殡葬",
+      "font_class": "siwangbinzang",
+      "unicode": "e618",
+      "unicode_decimal": 58904
+    },
+    {
       "icon_id": "9166442",
       "name": "其他",
       "font_class": "qita",

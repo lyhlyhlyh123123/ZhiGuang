@@ -40,7 +40,7 @@ exports.main = async (event) => {
 
     return { success: true, plant, journals: allJournals };
   } catch (err) {
-    console.error('【植光】getPlantPublic 失败:', err);
+    console.error('【小植书】getPlantPublic 失败:', err);
     return { success: false, error: String(err) };
   }
 };

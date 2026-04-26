@@ -77,26 +77,24 @@ page {
   display: block;
 }
 
-/* 动作轮播 */
-.action-swiper {
+/* 动作横向滑动 */
+.action-scroll {
   width: 100%;
-  height: 490rpx;
-  margin-bottom: 50rpx;
+  white-space: nowrap;
+  padding: 0 0 8rpx;
 }
 
-/* 动作网格 */
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18rpx;
-  padding: 0 16rpx 30rpx;
-  height: 100%;
-  align-content: start;
+.action-row {
+  display: inline-flex;
+  gap: 16rpx;
+  padding: 0 16rpx 8rpx;
 }
 
 .action-item {
   background-color: #FFFFFF;
-  min-height: 200rpx;
+  width: 160rpx;
+  min-height: 160rpx;
+  flex-shrink: 0;
   border-radius: 26rpx;
   display: flex;
   flex-direction: column;

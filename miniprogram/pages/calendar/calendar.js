@@ -75,7 +75,7 @@ Page({
       this._monthCache[cacheKey] = monthStats;
       this.setData({ monthStats });
     } catch(e) {
-      console.error('【植光】日历数据加载失败:', e);
+      console.error('【小植书】日历数据加载失败:', e);
     }
     this.buildCalendar();
 
